@@ -5,6 +5,7 @@
     --node-color: #1e1b4b;
     --line-color: #6d28d9;
     --accent: #4f46e5;
+    --on-accent: #ffffff;
     --btn-bg: #e5e7eb;
     --btn-text: #374151;
     --panel-bg: #ffffff;
@@ -22,6 +23,8 @@ body.dark-mode {
     --panel-bg: #2d3748; 
     --shadow: rgba(0,0,0,0.5);
     --pop-shadow: 0 4px 0 rgba(0,0,0,0.5);
+    --accent: #ffffff;
+    --on-accent: #111827;
 }
 
 body {
@@ -32,7 +35,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100vh;
+    height: 100dvh; 
     margin: 0;
     overflow: hidden;
     user-select: none;
@@ -43,7 +46,8 @@ body {
 #theme-toggle {
     position: fixed;
     top: 20px;
-    left: 20px;
+    right: 20px; 
+    left: auto;
     background: none;
     border: none;
     font-size: 2rem;
@@ -57,14 +61,15 @@ body {
 
 #rules-container {
     position: fixed;
-    top: 20%; 
+    top: 15px; 
     left: 0;
-    width: 220px; 
+    width: 250px; 
     transform: translateX(-100%); 
-    z-index: 200;
+    z-index: 300;
     transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
     display: flex; 
     flex-direction: column;
+    height: auto;
 }
 
 #rules-container.open { transform: translateX(0); }
@@ -78,7 +83,7 @@ body {
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
     border: 2px solid var(--btn-bg); 
     border-left: none;
 }
@@ -94,29 +99,25 @@ body.dark-mode #rules-panel {
     top: 0;
     width: 50px;
     height: 50px;
-    background-color: var(--accent);
-    color: white;
+    background-color: var(--btn-bg);
+    color: var(--accent);
     border: none;
     border-radius: 0 10px 10px 0;
     cursor: pointer;
     font-size: 1.5rem;
+    font-weight: bold;
+    font-family: serif; 
+    font-style: italic;
     box-shadow: 4px 4px 8px var(--shadow);
     display: flex;
     align-items: center;
     justify-content: center;
-    animation: pulse-attention 2s infinite;
+    transition: background-color 0.2s;
 }
 
 #rules-container.open #rules-toggle-btn {
-    animation: none;
-    background-color: var(--btn-bg);
-    color: var(--text-color);
-}
-
-@keyframes pulse-attention {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+    background-color: var(--accent);
+    color: var(--on-accent);
 }
 
 .rule-item {
@@ -141,21 +142,30 @@ body.dark-mode #rules-panel {
     box-shadow: var(--pop-shadow);
 }
 
+.rule-text {
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
 header {
     text-align: center;
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     width: 100%;
+    position: relative; 
+    pointer-events: none;
 }
 
 h1 { 
-    margin: 0 0 10px 0; 
+    margin: 0; 
     color: var(--text-color); 
     font-size: 2.5rem;
     letter-spacing: 2px;
     text-shadow: 2px 2px 0 var(--bg-color);
+    pointer-events: auto;
 }
 
 #stats {
+    margin-top: 5px;
     display: flex;
     justify-content: center;
     gap: 30px;
@@ -171,10 +181,11 @@ h1 {
     padding: 10px;
     border-radius: 15px;
     box-shadow: 0 15px 35px var(--shadow); 
-    width: 90vw; 
-    height: 90vw;
-    max-width: 500px;
-    max-height: 500px;
+    width: min(90vw, 60vh);
+    height: min(90vw, 60vh);
+    max-width: 600px;
+    max-height: 600px;
+    aspect-ratio: 1 / 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -190,19 +201,33 @@ canvas {
 }
 
 #message-area {
-    height: 30px;
-    color: var(--accent);
-    font-weight: bold;
+    height: 40px;
     margin-top: 15px;
-    font-size: 1.1rem;
+    font-size: 1.5rem;
+    font-weight: 800;
     text-align: center;
-    min-height: 30px;
+    min-height: 40px;
+    background: linear-gradient(90deg, #ff00cc, #3333ff, #ff00cc);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 5px rgba(79, 70, 229, 0.5));
+    animation: shine 3s linear infinite;
+    opacity: 0; 
+    transition: opacity 0.3s;
+}
+
+#message-area.visible { opacity: 1; }
+
+@keyframes shine {
+    to { background-position: 200% center; }
 }
 
 #ui-controls {
     margin-top: 15px;
     display: flex;
     gap: 15px;
+    z-index: 10;
 }
 
 button.game-btn {
@@ -223,5 +248,12 @@ button.game-btn:active {
     box-shadow: none; 
 }
 
-.btn-primary { background-color: var(--accent); color: white; }
-.btn-secondary { background-color: var(--btn-bg); color: var(--btn-text); }
+.btn-primary { 
+    background-color: var(--accent); 
+    color: var(--on-accent);
+}
+
+.btn-secondary { 
+    background-color: var(--btn-bg); 
+    color: var(--btn-text); 
+}

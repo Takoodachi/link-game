@@ -54,14 +54,16 @@ class Game {
         rulesBtn.onclick = (e) => {
             e.stopPropagation(); 
             rulesContainer.classList.toggle('open');
-            rulesBtn.innerText = rulesContainer.classList.contains('open') ? '✖' : '➜';
+            // Toggle icon X / i
+            rulesBtn.innerText = rulesContainer.classList.contains('open') ? '✖' : 'i';
         };
 
         document.addEventListener('click', (e) => {
             if (rulesContainer.classList.contains('open')) {
+                // If clicking outside panel AND not clicking the button
                 if (!panel.contains(e.target) && !rulesBtn.contains(e.target)) {
                     rulesContainer.classList.remove('open');
-                    rulesBtn.innerText = '➜';
+                    rulesBtn.innerText = 'i';
                 }
             }
         });
@@ -297,21 +299,16 @@ class Game {
 
             if (lineAtTarget && lineAtTarget.startVal < this.currentDragLine.startVal) {
                 const cutIdx = lineAtTarget.points.findIndex(p => p.r === r && p.c === c);
-                
                 const newPoints = lineAtTarget.points.slice(0, cutIdx + 1);
-                
                 this.currentDragLine = {
                     startVal: lineAtTarget.startVal,
                     points: newPoints
                 };
-
                 this.userLines = this.userLines.filter(l => l.startVal < lineAtTarget.startVal);
-                
                 this.draw();
                 return;
             }
-
-            return;
+            return; 
         }
 
         pts.push({r, c});
@@ -428,7 +425,10 @@ class Game {
     }
 
     handleLevelComplete() {
-        document.getElementById('message-area').innerText = "Level Complete!";
+        const msg = document.getElementById('message-area');
+        msg.innerText = "Level Complete!";
+        msg.classList.add('visible'); 
+        
         if (this.level % 5 === 0) {
             this.hints++;
             alert(`Level ${this.level} Complete!\n\n🎉 You earned a free hint!`);
@@ -437,8 +437,9 @@ class Game {
             this.level++;
             this.gridSize = Math.min(8, 5 + Math.floor((this.level - 1) / 5));
             this.saveProgress();
+            msg.classList.remove('visible');
+            msg.innerText = "";
             this.initLevel();
-            document.getElementById('message-area').innerText = "";
         }, 1000);
     }
 
