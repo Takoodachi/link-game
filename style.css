@@ -1,0 +1,101 @@
+:root {
+    --bg-color: #f0f2f5;
+    --grid-bg: #ffffff;
+    --line-color: #6d28d9;
+    --node-color: #1e1b4b;
+    --text-color: #ffffff;
+    --accent: #4f46e5;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden; /* Prevent scrolling while dragging */
+    user-select: none;
+    touch-action: none;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+h1 { 
+    margin: 0 0 10px 0; 
+    color: #333; 
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+}
+
+#stats {
+    display: flex;
+    justify-content: center; /* Centered */
+    gap: 30px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #4b5563;
+}
+
+#game-wrapper {
+    position: relative;
+    background: var(--grid-bg);
+    padding: 10px;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    
+    /* Responsive Sizing */
+    width: 90vw; 
+    height: 90vw;
+    max-width: 500px;
+    max-height: 500px;
+    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+canvas {
+    border-radius: 10px;
+    cursor: crosshair;
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#message-area {
+    height: 30px;
+    color: var(--accent);
+    font-weight: bold;
+    margin-top: 15px;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+#ui-controls {
+    margin-top: 10px;
+    display: flex;
+    gap: 15px;
+}
+
+button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 25px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: transform 0.1s;
+    outline: none;
+}
+
+button:active { transform: scale(0.95); }
+
+.btn-primary { background-color: var(--accent); color: white; }
+.btn-secondary { background-color: #e5e7eb; color: #374151; }
