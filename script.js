@@ -6,9 +6,11 @@ class Game {
         
         this.gridSize = 5; 
         this.level = 1;
-        this.hints = 3;
+        this.hints = 2;
         this.lastHintDate = null;
         this.maxNumber = 0;
+        
+        this.numberIndices = {}; 
         
         this.colors = [
             '#6d28d9', '#ef4444', '#059669', '#2563eb', 
@@ -51,19 +53,21 @@ class Game {
         const rulesBtn = document.getElementById('rules-toggle-btn');
         const panel = document.getElementById('rules-panel');
 
+        const hasVisited = localStorage.getItem('linkGameHasVisited');
+        if (!hasVisited) {
+            rulesContainer.classList.add('open');
+            localStorage.setItem('linkGameHasVisited', 'true');
+        }
+
         rulesBtn.onclick = (e) => {
             e.stopPropagation(); 
             rulesContainer.classList.toggle('open');
-            // Toggle icon X / i
-            rulesBtn.innerText = rulesContainer.classList.contains('open') ? '✖' : 'i';
         };
 
         document.addEventListener('click', (e) => {
             if (rulesContainer.classList.contains('open')) {
-                // If clicking outside panel AND not clicking the button
                 if (!panel.contains(e.target) && !rulesBtn.contains(e.target)) {
                     rulesContainer.classList.remove('open');
-                    rulesBtn.innerText = 'i';
                 }
             }
         });
@@ -118,7 +122,7 @@ class Game {
         if (saved) {
             const data = JSON.parse(saved);
             this.level = data.level || 1;
-            this.hints = data.hints !== undefined ? data.hints : 3;
+            this.hints = data.hints !== undefined ? data.hints : 2;
             this.lastHintDate = data.lastHintDate;
             this.gridSize = Math.min(8, 5 + Math.floor((this.level - 1) / 5));
         }
@@ -136,12 +140,12 @@ class Game {
 
     checkDailyHint() {
         const today = new Date().toDateString();
-        if (this.lastHintDate && this.lastHintDate !== today) {
-            this.hints++;
-            alert("Daily Bonus: +1 Hint!");
+        if (this.lastHintDate !== today) {
+            this.hints = 2;
+            this.lastHintDate = today;
+            alert("New Day! Hints reset to 2.");
+            this.saveProgress();
         }
-        this.lastHintDate = today;
-        this.saveProgress();
     }
 
     initLevel() {
@@ -149,6 +153,8 @@ class Game {
         this.setRandomColor();
         this.userLines = [];
         this.currentDragLine = null;
+        this.numberIndices = {};
+        
         this.grid = Array(this.gridSize).fill().map(() => Array(this.gridSize).fill({ val: null, type: 'empty' }));
         this.resizeCanvas();
         this.solutionPath = this.generateHamiltonianPath();
@@ -159,6 +165,9 @@ class Game {
         while(pathIdx < this.solutionPath.length) {
             const pos = this.solutionPath[pathIdx];
             this.grid[pos.r][pos.c] = { val: numCounter, type: 'fixed' };
+            
+            this.numberIndices[numCounter] = pathIdx;
+
             if(pathIdx === this.solutionPath.length - 1) break;
             let gap = Math.floor(Math.random() * 3) + 2; 
             if (pathIdx + gap >= this.solutionPath.length) gap = this.solutionPath.length - 1 - pathIdx;
@@ -170,6 +179,7 @@ class Game {
         const lastPos = this.solutionPath[this.solutionPath.length - 1];
         if (this.grid[lastPos.r][lastPos.c].val === null) {
             this.grid[lastPos.r][lastPos.c] = { val: numCounter, type: 'fixed' };
+            this.numberIndices[numCounter] = this.solutionPath.length - 1;
         } else {
             numCounter = this.grid[lastPos.r][lastPos.c].val;
         }
@@ -357,31 +367,52 @@ class Game {
 
     useHint() {
         if (this.hints <= 0 || this.isWinning) {
-            if(!this.isWinning) alert("No hints remaining!");
+            if(!this.isWinning) alert("No hints remaining! Come back tomorrow.");
             return;
         }
         this.hints--;
         this.saveProgress();
+
+        let currentMax = 1;
+        while (currentMax < this.maxNumber) {
+            const hasNext = this.userLines.find(l => l.startVal === currentMax);
+            if (hasNext) {
+                currentMax++;
+            } else {
+                break;
+            }
+        }
+
+        const targetNumber = Math.min(currentMax + 4, this.maxNumber);
+        
+        const startIndex = this.numberIndices[currentMax];
+        const endIndex = this.numberIndices[targetNumber];
+
+        if (startIndex === undefined || endIndex === undefined) return;
+
+        const hintPoints = this.solutionPath.slice(startIndex, endIndex + 1);
+
         const ctx = this.ctx;
         ctx.save();
-        ctx.globalAlpha = 0.5;
+        ctx.globalAlpha = 0.6;
         ctx.strokeStyle = this.isDarkMode ? "#FFFF00" : "#FFD700"; 
         ctx.lineWidth = this.cellSize * 0.4;
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
+        
         ctx.beginPath();
-        const center = (x) => x * this.cellSize + this.cellSize/2;
-        if(this.solutionPath.length > 0) {
-            const start = this.solutionPath[0];
-            ctx.moveTo(center(start.c), center(start.r));
-            for(let i=1; i<this.solutionPath.length; i++) {
-                const p = this.solutionPath[i];
-                ctx.lineTo(center(p.c), center(p.r));
-            }
+        const cx = c => c * this.cellSize + this.cellSize/2;
+        const cy = r => r * this.cellSize + this.cellSize/2;
+        
+        ctx.moveTo(cx(hintPoints[0].c), cy(hintPoints[0].r));
+        for(let i=1; i<hintPoints.length; i++) {
+            ctx.lineTo(cx(hintPoints[i].c), cy(hintPoints[i].r));
         }
+        
         ctx.stroke();
         ctx.restore();
-        setTimeout(() => this.draw(), 1500);
+        
+        setTimeout(() => this.draw(), 2000);
     }
 
     checkWin() {
@@ -429,10 +460,6 @@ class Game {
         msg.innerText = "Level Complete!";
         msg.classList.add('visible'); 
         
-        if (this.level % 5 === 0) {
-            this.hints++;
-            alert(`Level ${this.level} Complete!\n\n🎉 You earned a free hint!`);
-        }
         setTimeout(() => {
             this.level++;
             this.gridSize = Math.min(8, 5 + Math.floor((this.level - 1) / 5));
