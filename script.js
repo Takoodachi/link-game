@@ -227,12 +227,17 @@ class Game {
     resizeCanvas() {
         const rect = this.wrapper.getBoundingClientRect();
         const displaySize = Math.floor(Math.min(rect.width, rect.height) - 20);
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = Math.max(1, window.devicePixelRatio || 1);
         this.canvas.width = displaySize * dpr;
         this.canvas.height = displaySize * dpr;
         this.canvas.style.width = `${displaySize}px`;
         this.canvas.style.height = `${displaySize}px`;
-        this.ctx.scale(dpr, dpr);
+        if (this.ctx.setTransform) {
+            this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        } else {
+            try { this.ctx.resetTransform(); } catch (e) {}
+            this.ctx.scale(dpr, dpr);
+        }
         this.cellSize = displaySize / this.gridSize;
         this.draw();
     }
