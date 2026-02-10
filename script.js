@@ -2,6 +2,10 @@ class Game {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        this.confettiCanvas = document.getElementById('confetti-canvas');
+        this.confettiCtx = this.confettiCanvas.getContext('2d');
+        this.confettiParticles = [];
+        this.isCelebrating = false;
         this.wrapper = document.getElementById('game-wrapper');
         
         this.allLevels = [];
@@ -259,11 +263,31 @@ class Game {
         const {r, c} = this.getPos(e, isTouch);
         if (!this.isValidCell(r, c)) return;
         const cell = this.grid[r][c];
+
         if (cell.val !== null) {
-            this.isDrawing = true;
-            this.currentDragLine = { startVal: cell.val, points: [{r, c}] };
-            this.userLines = this.userLines.filter(l => l.startVal < cell.val);
-            this.draw();
+            const cutIndex = this.userLines.findIndex(l => l.startVal === cell.val);
+            if (cutIndex !== -1) {
+                this.userLines = this.userLines.slice(0, cutIndex);
+                this.draw();
+            }
+
+            let isValidStart = false;
+            
+            if (cell.val === 1 && this.userLines.length === 0) {
+                isValidStart = true;
+            } else if (this.userLines.length > 0) {
+                const lastLine = this.userLines[this.userLines.length - 1];
+                const lastPt = lastLine.points[lastLine.points.length - 1];
+                if (lastPt.r === r && lastPt.c === c) {
+                    isValidStart = true;
+                }
+            }
+
+            if (isValidStart) {
+                this.isDrawing = true;
+                this.currentDragLine = { startVal: cell.val, points: [{r, c}], widthScale: 0.45 };
+                this.draw();
+            }
         }
     }
 
@@ -285,6 +309,20 @@ class Game {
         
         if (this.isCellOccupied(r, c)) {
             const target = this.grid[r][c];
+            if (this.userLines.length > 0) {
+                const lastLine = this.userLines[this.userLines.length - 1];
+                if (lastLine.points.length > 1) {
+                    const prevPt = lastLine.points[lastLine.points.length - 2];
+                    if (prevPt.r === r && prevPt.c === c) {
+                        this.userLines.pop();
+                        this.currentDragLine = lastLine;
+                        this.currentDragLine.widthScale = 0.45;
+                        this.currentDragLine.points.pop(); 
+                        this.draw();
+                        return;
+                    }
+                }
+            }
 
             if (target.type === 'fixed') {
                 if (target.val === this.currentDragLine.startVal) {
@@ -293,12 +331,24 @@ class Game {
                     return;
                 }
 
-                if (target.val === this.currentDragLine.startVal + 1) {
+                const lastLine = this.userLines[this.userLines.length - 1];
+                if (lastLine && target.val === lastLine.startVal) {
+                    this.userLines.pop();
+                    this.currentDragLine = { startVal: target.val, points: [{r, c}], widthScale: 0.45 };
+                    this.draw();
+                    return;
+                }
+
+                const isUsed = this.userLines.some(l => l.startVal === target.val) || (target.val === 1);
+
+                if (!isUsed) {
                     pts.push({r, c});
                     this.userLines.push(this.currentDragLine);
-                    if (target.val < this.maxNumber) {
-                        this.currentDragLine = { startVal: target.val, points: [{r, c}] };
-                        this.userLines = this.userLines.filter(l => l.startVal !== target.val);
+                    
+                    this.triggerTileAnimation(r, c); 
+
+                    if (this.userLines.length < this.maxNumber - 1) {
+                        this.currentDragLine = { startVal: target.val, points: [{r, c}], widthScale: 0.45 };
                     } else { 
                         this.isDrawing = false; 
                         this.currentDragLine = null; 
@@ -307,23 +357,11 @@ class Game {
                     this.draw(); 
                     return;
                 } 
-                
-                if (target.val === this.currentDragLine.startVal - 1) {
-                     this.userLines = this.userLines.filter(l => l.startVal < target.val);
-                     this.currentDragLine = { startVal: target.val, points: [{r, c}] };
-                     this.draw(); 
-                     return;
-                }
-
                 return;
             }
 
             const lineAtTarget = this.getLineAt(r, c);
-            
-            if (lineAtTarget && lineAtTarget.startVal === this.currentDragLine.startVal - 1) {
-                this.draw();
-                return;
-            } else {
+            if (lineAtTarget) {
                 return;
             }
         }
@@ -382,9 +420,10 @@ class Game {
     }
     triggerWinSequence() {
         this.isWinning = true;
-        const sortedLines = [...this.userLines].sort((a, b) => a.startVal - b.startVal);
+        const pathLines = this.userLines;
+        
         this.winAnimationPoints = [];
-        sortedLines.forEach(line => { this.winAnimationPoints.push(...line.points); });
+        pathLines.forEach(line => { this.winAnimationPoints.push(...line.points); });
         this.winFrame = 0; this.totalWinFrames = 120; 
         requestAnimationFrame(() => this.animateWinLoop());
     }
@@ -400,10 +439,16 @@ class Game {
         const msg = document.getElementById('message-area');
         msg.innerText = "Level Complete!";
         msg.classList.add('visible'); 
+        this.startCelebration();
+
         if (this.currentLevelIndex === this.maxUnlockedIndex) {
             this.maxUnlockedIndex++;
         }
         setTimeout(() => {
+            this.stopCelebration();
+            msg.classList.remove('visible');
+            msg.innerText = "";
+            
             if (this.currentLevelIndex + 1 < this.allLevels.length) {
                 this.currentLevelIndex++;
                 this.saveProgress();
@@ -411,9 +456,7 @@ class Game {
             } else {
                 alert("You have beaten all levels!");
             }
-            msg.classList.remove('visible');
-            msg.innerText = "";
-        }, 1000);
+        }, 2000);
     }
     updateUI() {
         if(this.allLevels && this.allLevels[this.currentLevelIndex]) {
@@ -431,6 +474,19 @@ class Game {
         const lineColor = style.getPropertyValue('--line-color').trim();
         const nodeColor = style.getPropertyValue('--node-color').trim();
         const nodeTextColor = this.isDarkMode ? "#000" : "#fff";
+
+        let keepAnimating = false;
+        if (!isAnimating) {
+            this.userLines.forEach(l => {
+                if (l.widthScale === undefined) l.widthScale = 0.5;
+                
+                if (l.widthScale < 0.5) {
+                    l.widthScale += 0.05;
+                    if (l.widthScale > 0.5) l.widthScale = 0.5;
+                    keepAnimating = true;
+                }
+            });
+        }
 
         ctx.fillStyle = bgColor;
         ctx.fillRect(0, 0, this.gridSize * cs, this.gridSize * cs);
@@ -468,14 +524,19 @@ class Game {
             ctx.stroke();
         }
 
-        const drawPoly = (points) => {
+        const drawPoly = (points, wScale = 0.5) => {
             if(points.length < 2) return;
             ctx.beginPath(); ctx.lineCap = "round"; ctx.lineJoin = "round";
-            ctx.lineWidth = cs * 0.5; ctx.strokeStyle = lineColor;
+            
+            ctx.lineWidth = cs * wScale; 
+            ctx.strokeStyle = lineColor;
             ctx.moveTo(cx(points[0].c), cy(points[0].r));
             for(let i=1; i<points.length; i++) ctx.lineTo(cx(points[i].c), cy(points[i].r));
             ctx.stroke();
-            ctx.beginPath(); ctx.lineWidth = cs * 0.15; ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+            
+            ctx.beginPath(); 
+            ctx.lineWidth = cs * (wScale * 0.3);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
             ctx.moveTo(cx(points[0].c), cy(points[0].r));
             for(let i=1; i<points.length; i++) ctx.lineTo(cx(points[i].c), cy(points[i].r));
             ctx.stroke();
@@ -488,20 +549,23 @@ class Game {
                 drawPoly(this.winAnimationPoints.slice(0, maxIdx)); ctx.restore();
             }
         } else {
-            this.userLines.forEach(l => drawPoly(l.points));
+            this.userLines.forEach(l => drawPoly(l.points, l.widthScale));
             
             if(this.currentDragLine) {
                 const prevLine = this.userLines.find(l => l.startVal === this.currentDragLine.startVal - 1);
-                
+                const dragWidth = this.currentDragLine.widthScale || 0.45;
+
                 if (!prevLine) {
-                    drawPoly(this.currentDragLine.points);
+                    drawPoly(this.currentDragLine.points, dragWidth);
                 } else {
                     const excludeSet = new Set(prevLine.points.map(p => `${p.r},${p.c}`));
                     const pts = this.currentDragLine.points;
                     
                     if (pts.length > 1) {
                         ctx.lineCap = "round"; ctx.lineJoin = "round";
-                        ctx.lineWidth = cs * 0.5; ctx.strokeStyle = lineColor;
+                        
+                        ctx.lineWidth = cs * dragWidth; 
+                        ctx.strokeStyle = lineColor;
                         ctx.beginPath();
                         for(let i=0; i<pts.length-1; i++) {
                             const p1 = pts[i]; const p2 = pts[i+1];
@@ -511,7 +575,8 @@ class Game {
                         }
                         ctx.stroke();
 
-                        ctx.lineWidth = cs * 0.15; ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+                        ctx.lineWidth = cs * (dragWidth * 0.3); 
+                        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
                         ctx.beginPath();
                         for(let i=0; i<pts.length-1; i++) {
                             const p1 = pts[i]; const p2 = pts[i+1];
@@ -531,13 +596,114 @@ class Game {
             for(let c=0; c<this.gridSize; c++) {
                 const cell = this.grid[r][c];
                 if(cell.type === 'fixed') {
-                    ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.3)"; ctx.shadowBlur = 5; ctx.shadowOffsetY = 3;
+                    ctx.save();
+                    if (cell.val === 1 || cell.val === this.maxNumber) {
+                        ctx.shadowColor = this.isDarkMode ? "rgba(255,255,255,0.85)" : lineColor;
+                        ctx.shadowBlur = cs * 0.2;
+                        ctx.shadowOffsetY = 0;
+                    } else {
+                        ctx.shadowColor = "rgba(0,0,0,0.3)"; ctx.shadowBlur = 1; ctx.shadowOffsetY = 1;
+                    }
                     ctx.fillStyle = nodeColor; ctx.beginPath();
-                    ctx.arc(cx(c), cy(r), cs * 0.35, 0, Math.PI*2); ctx.fill(); ctx.restore();
+                    const scale = cell.animScale || 1.0; 
+                    ctx.arc(cx(c), cy(r), cs * 0.35 * scale, 0, Math.PI*2); 
+                    ctx.fill();
+                    ctx.restore();
                     ctx.fillStyle = nodeTextColor; ctx.fillText(cell.val, cx(c), cy(r));
                 }
             }
         }
+        
+        if (keepAnimating) {
+            requestAnimationFrame(() => this.draw());
+        }
+    }
+
+    triggerTileAnimation(r, c) {
+        const cell = this.grid[r][c];
+        let frame = 0;
+        const maxFrames = 15;
+        const amplitude = 0.35;
+
+        const animate = () => {
+            frame++;
+            const progress = frame / maxFrames;
+            
+            if (progress >= 1) {
+                cell.animScale = 1.0;
+                this.draw();
+                return;
+            }
+
+            cell.animScale = 1.0 + Math.sin(progress * Math.PI) * amplitude;
+            
+            this.draw();
+            requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+    }
+
+    startCelebration() {
+        this.isCelebrating = true;
+        this.confettiCanvas.classList.add('active');
+        this.confettiCanvas.width = window.innerWidth;
+        this.confettiCanvas.height = window.innerHeight;
+
+        this.confettiParticles = [];
+        for(let i=0; i<150; i++) {
+            this.confettiParticles.push(this.createParticle());
+        }
+        this.animateConfetti();
+    }
+
+    stopCelebration() {
+        this.isCelebrating = false;
+        this.confettiCanvas.classList.remove('active');
+        this.confettiCtx.clearRect(0, 0, this.confettiCanvas.width, this.confettiCanvas.height);
+    }
+
+    createParticle() {
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffffff'];
+        return {
+            x: Math.random() * this.confettiCanvas.width,
+            y: Math.random() * this.confettiCanvas.height - this.confettiCanvas.height,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            size: Math.random() * 10 + 5,
+            vx: Math.random() * 4 - 2,
+            vy: Math.random() * 4 + 4,
+            rotation: Math.random() * 360,
+            rotationSpeed: Math.random() * 10 - 5
+        };
+    }
+
+    animateConfetti() {
+        if (!this.isCelebrating) return;
+        
+        const ctx = this.confettiCtx;
+        const width = this.confettiCanvas.width;
+        const height = this.confettiCanvas.height;
+
+        ctx.clearRect(0, 0, width, height);
+
+        this.confettiParticles.forEach(p => {
+            p.y += p.vy;
+            p.x += p.vx;
+            p.rotation += p.rotationSpeed;
+            
+            if (p.y > height) {
+                p.y = -20;
+                p.x = Math.random() * width;
+            }
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rotation * Math.PI / 180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+            ctx.restore();
+        });
+
+        requestAnimationFrame(() => this.animateConfetti());
     }
 }
 window.onload = () => { new Game(); };
