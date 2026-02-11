@@ -375,18 +375,23 @@ class Game {
         const pts = this.currentDragLine.points;
         const last = pts[pts.length - 1];
         
+        // Ignore if we are still in the same cell
         if (r === last.r && c === last.c) return; 
         
+        // 1. Standard Backtrack (within the currently dragging line)
+        // This handles simply moving back one step (A -> B -> A)
         if (pts.length > 1) {
             const prev = pts[pts.length - 2];
             if (prev.r === r && prev.c === c) { pts.pop(); this.draw(); return; }
         }
         
+        // Ensure we only move to adjacent cells
         if (Math.abs(r - last.r) + Math.abs(c - last.c) !== 1) return;
         
         if (this.isCellOccupied(r, c)) {
             const target = this.grid[r][c];
 
+            // 2. Backtrack through a Number (Resurrect previous line)
             if (this.userLines.length > 0) {
                 const lastLine = this.userLines[this.userLines.length - 1];
                 if (lastLine.points.length > 1) {
@@ -438,10 +443,16 @@ class Game {
                 return;
             }
 
+            // Collision with older lines
             const lineAtTarget = this.getLineAt(r, c);
             if (lineAtTarget) {
                 return;
             }
+
+            // --- THE FIX IS HERE ---
+            // If the cell is occupied (by our own line), and it wasn't a backtrack or valid connection,
+            // we MUST return to block the move. This prevents drawing loops on top of yourself.
+            return; 
         }
         
         pts.push({r, c}); this.draw();
