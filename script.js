@@ -539,7 +539,12 @@ class Game {
         msg.innerText = "Level Complete!";
         msg.classList.add('visible'); 
         this.startCelebration();
-
+        if (typeof gtag === 'function') {
+            gtag('event', 'level_complete', {
+                'level_index': this.currentLevelIndex,
+                'level_id': this.allLevels[this.currentLevelIndex].id
+            });
+        }
         if (this.currentLevelIndex === this.maxUnlockedIndex) {
             this.maxUnlockedIndex++;
         }
