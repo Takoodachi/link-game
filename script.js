@@ -500,10 +500,22 @@ class Game {
         const set = new Set();
         this.grid.forEach((row, r) => row.forEach((cell, c) => { if(cell.type === 'fixed') set.add(`${r},${c}`); }));
         this.userLines.forEach(line => { line.points.forEach(p => set.add(`${p.r},${p.c}`)); });
+        
         const isGridFull = (set.size === this.gridSize * this.gridSize);
-        const requiredLines = this.maxNumber - 1;
-        const currentLines = this.userLines.length;
-        if (isGridFull && currentLines === requiredLines) { this.triggerWinSequence(); }
+        if (!isGridFull) return;
+
+        for (let i = 1; i < this.maxNumber; i++) {
+            const line = this.userLines.find(l => l.startVal === i);
+            
+            if (!line) return;
+
+            const lastPt = line.points[line.points.length - 1];
+            const endCell = this.grid[lastPt.r][lastPt.c];
+
+            if (endCell.val !== i + 1) return;
+        }
+
+        this.triggerWinSequence();
     }
     triggerWinSequence() {
         this.isWinning = true;
