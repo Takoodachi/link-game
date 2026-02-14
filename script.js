@@ -51,6 +51,9 @@ class Game {
         this.isWinning = false;
         this.currentUser = null;
         this.isLoginMode = true;
+
+        this.devEmail = "admin@test.com";
+        this.isDevMode = false;
         
         this.colors = [ '#6d28d9', '#ef4444', '#059669', '#2563eb', '#db2777', '#d97706', '#0891b2' ];
         
@@ -101,21 +104,17 @@ class Game {
         const loggedOutText = this.isMobile ? "👤" : "Login";
 
         authBtn.innerText = loggedOutText;
-        authBtn.title = "Login / Register";
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 this.currentUser = user;
+                this.isDevMode = (user.email === this.devEmail); 
                 authBtn.innerText = loggedInText;
-                
-                authBtn.title = `Logged in as: ${user.email}`; 
-                
                 await this.loadProgress();
             } else {
                 this.currentUser = null;
+                this.isDevMode = false; 
                 authBtn.innerText = loggedOutText;
-                authBtn.title = "Login / Register"; 
-                
                 await this.loadProgress();
             }
         });
@@ -374,7 +373,9 @@ class Game {
         if (this.allLevels.length === 0) {
             grid.innerHTML = '<p style="color:var(--text-color); padding:20px;">Levels loading...</p>';
         } else {
-            for (let i = 0; i <= this.maxUnlockedIndex && i < this.allLevels.length; i++) {
+            const limit = this.isDevMode ? this.allLevels.length : this.maxUnlockedIndex;
+            
+            for (let i = 0; i <= limit && i < this.allLevels.length; i++) {
                 const lvl = this.allLevels[i];
                 const btn = document.createElement('button');
                 btn.innerText = lvl.id;
@@ -694,8 +695,13 @@ class Game {
     isValidCell(r, c) { return r >= 0 && r < this.gridSize && c >= 0 && c < this.gridSize; }
     isCellOccupied(r, c) {
         if (this.grid[r][c].type === 'fixed') return true;
+
         for (let line of this.userLines) { for (let p of line.points) { if (p.r === r && p.c === c) return true; } }
-        if (this.currentDragLine) { for (let i = 0; i < this.currentDragLine.points.length - 1; i++) { const p = this.currentDragLine.points[i]; if (p.r === r && p.c === c) return true; } }
+
+        if (this.currentDragLine) { for (let i = 0; i < this.currentDragLine.points.length - 1; i++) { const p = this.currentDragLine.points[i]; 
+
+        if (p.r === r && p.c === c) return true; } }
+        
         return false;
     }
     
@@ -703,17 +709,28 @@ class Game {
     resetLevel() { if (!this.isWinning) { this.userLines = []; this.draw(); } }
 
     useHint() {
-        if (this.hints <= 0 || this.isWinning) { if(!this.isWinning) alert("No hints remaining! Come back tomorrow."); return; }
-        this.hints--; this.saveProgress();
+        if ((this.hints <= 0 && !this.isDevMode) || this.isWinning) { 
+            if(!this.isWinning) alert("No hints remaining! Come back tomorrow."); 
+            return; 
+        }
+        
+        if (!this.isDevMode) {
+            this.hints--; 
+            this.saveProgress();
+        }
+
         let currentMax = 1;
         while (currentMax < this.maxNumber) {
             const hasNext = this.userLines.find(l => l.startVal === currentMax);
             if (hasNext) { currentMax++; } else { break; }
         }
+
         const targetNumber = Math.min(currentMax + 4, this.maxNumber);
         const startIndex = this.numberIndices[currentMax];
         const endIndex = this.numberIndices[targetNumber];
+
         if (startIndex === undefined || endIndex === undefined) return;
+
         const hintPoints = this.solutionPath.slice(startIndex, endIndex + 1);
         const ctx = this.ctx;
         ctx.save();
@@ -725,7 +742,9 @@ class Game {
         const cx = c => c * this.cellSize + this.cellSize/2;
         const cy = r => r * this.cellSize + this.cellSize/2;
         ctx.moveTo(cx(hintPoints[0].c), cy(hintPoints[0].r));
+
         for(let i=1; i<hintPoints.length; i++) { ctx.lineTo(cx(hintPoints[i].c), cy(hintPoints[i].r)); }
+
         ctx.stroke(); ctx.restore();
         setTimeout(() => this.draw(), 2000);
     }
@@ -796,13 +815,17 @@ class Game {
             }
         }, 2000);
     }
+
     updateUI() {
         if(this.allLevels && this.allLevels[this.currentLevelIndex]) {
             document.getElementById('level-select-btn').innerText = `Level ${this.allLevels[this.currentLevelIndex].id} ▾`;
         }
-        document.getElementById('hints-display').innerText = `Hints: ${this.hints}`;
+        
+        document.getElementById('hints-display').innerText = this.isDevMode ? `Hints: ∞ (Dev)` : `Hints: ${this.hints}`;
+        
         const answerBtn = document.getElementById('btn-show-answer');
-        if (this.currentLevelIndex < this.maxUnlockedIndex) {
+
+        if (this.currentLevelIndex < this.maxUnlockedIndex || this.isDevMode) {
             answerBtn.style.display = 'inline-block';
         } else {
             answerBtn.style.display = 'none';
@@ -1051,7 +1074,7 @@ class Game {
     }
 
     showAnswer() {
-        if (this.currentLevelIndex >= this.maxUnlockedIndex) return;
+        if (this.currentLevelIndex >= this.maxUnlockedIndex && !this.isDevMode) return;
 
         this.userLines = [];
         this.currentDragLine = null;

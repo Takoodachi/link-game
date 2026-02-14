@@ -353,7 +353,26 @@ button.game-btn:active {
     box-shadow: 0 0 10px var(--accent);
 }
 
-.lvl-btn.completed { border: 2px solid var(--accent);}
+.lvl-btn.completed { border: 2px solid var(--accent); }
+
+#level-grid::-webkit-scrollbar { width: 10px; }
+
+#level-grid::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 8px;
+}
+
+#level-grid::-webkit-scrollbar-thumb {
+    background: var(--btn-bg);
+    border-radius: 8px;
+    border: 2px solid var(--panel-bg, #ffffff); 
+}
+
+#level-grid::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+body.dark-mode #level-grid::-webkit-scrollbar-thumb {
+    border-color: var(--panel-bg, #2d3748);
+}
 
 body.dark-mode .lvl-btn.locked { 
     background: #374151; 
