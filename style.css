@@ -300,6 +300,7 @@ button.game-btn {
     outline: none;
     box-shadow: var(--pop-shadow);
     transform: translateY(0);
+    margin-bottom: 4px;
 }
 
 button.game-btn:active { 
@@ -335,6 +336,66 @@ button.game-btn:active {
 .level-indicator:active { 
     transform: translateY(2px); 
     box-shadow: none; 
+}
+
+.search-container {
+    display: flex;
+    margin: 0 15px 0 15px;
+    padding-bottom: 15px; 
+    gap: 10px;
+    max-height: 75px; 
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding-bottom 0.3s ease, opacity 0.2s ease;
+    flex-shrink: 0;
+}
+
+.search-container.hidden {
+    max-height: 0;
+    padding-bottom: 0; 
+    opacity: 0;
+    pointer-events: none; 
+}
+
+.level-search-input {
+    flex-grow: 1;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    background: var(--btn-bg);
+    color: var(--text-color);
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.level-search-input:focus { border-color: var(--accent); }
+
+.level-search-input[type=number] { -moz-appearance: textfield; }
+
+body.dark-mode .level-search-input { border-color: #4b5563; }
+
+.level-search-input::-webkit-outer-spin-button,
+.level-search-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.level-search-btn {
+    background-color: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    border-radius: 8px;
+    padding: 0 15px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    box-shadow: var(--pop-shadow);
+    transition: transform 0.1s ease;
+}
+
+.level-search-btn:active {
+    transform: translateY(2px);
+    box-shadow: none;
 }
 
 .modal-overlay {
@@ -602,6 +663,14 @@ body.dark-mode .auth-input { border-color: #4b5563; }
 }
 
 .conflict-btn.local-btn:hover { background: rgba(128, 128, 128, 0.2); }
+
+#close-apk-btn {
+    background: none; 
+    border: none; 
+    font-size: 1.5rem; 
+    cursor: pointer; 
+    color: var(--text-color);
+}
 
 .profile-body {
     padding: 20px;

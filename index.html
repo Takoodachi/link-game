@@ -44,6 +44,12 @@
                 <h2>Select Level</h2>
                 <button id="close-level-btn">✖</button>
             </div>
+            
+            <div class="search-container">
+                <input type="number" id="level-search" class="level-search-input" placeholder="Search level..." min="1">
+                <button id="level-search-btn" class="level-search-btn" title="Search">➔</button>
+            </div>
+
             <div id="level-grid">
                 </div>
         </div>
@@ -99,6 +105,26 @@
                 </button>
                 <button id="btn-keep-local" class="conflict-btn local-btn">
                     Keep Local Progress<br><small>(<span id="conflict-local-text">Level ?</span>)</small>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="apk-modal" class="modal-overlay">
+        <div class="modal-content conflict-modal-content">
+            <div class="modal-header">
+                <h2>Get the App!</h2>
+                <button id="close-apk-btn">✖</button>
+            </div>
+            <div class="conflict-body">
+                <p>Playing on mobile? Download the official Android APK for a smoother experience, full-screen gameplay, and better touch controls!</p>
+            </div>
+            <div class="conflict-options">
+                <button id="btn-download-apk" class="conflict-btn cloud-btn">
+                    Download APK
+                </button>
+                <button id="btn-continue-web" class="conflict-btn local-btn">
+                    Continue on Web
                 </button>
             </div>
         </div>

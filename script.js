@@ -55,6 +55,7 @@ class Game {
         this.isWinning = false;
         this.currentUser = null;
         this.isLoginMode = true;
+        this.searchTimeout = null;
 
         this.devEmail = "admin@test.com";
         this.isDevMode = false;
@@ -68,6 +69,29 @@ class Game {
         
         document.getElementById('level-select-btn').onclick = () => this.openLevelModal();
         document.getElementById('close-level-btn').onclick = () => this.closeLevelModal();
+        document.getElementById('level-search').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') this.executeSearch();
+        });
+        
+        document.getElementById('level-search-btn').addEventListener('click', () => this.executeSearch());
+        this.lastScrollTop = 0;
+        const levelGrid = document.getElementById('level-grid');
+        const searchContainer = document.querySelector('.search-container');
+
+        levelGrid.addEventListener('scroll', () => {
+            if (!searchContainer) return;
+            
+            const currentScrollTop = levelGrid.scrollTop;
+            
+            if (currentScrollTop > this.lastScrollTop && currentScrollTop > 10) {
+                searchContainer.classList.add('hidden');
+            }
+            else if (currentScrollTop < this.lastScrollTop) {
+                searchContainer.classList.remove('hidden');
+            }
+            
+            this.lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop; 
+        });
         document.getElementById('level-modal').addEventListener('click', (e) => {
             if (e.target.id === 'level-modal') this.closeLevelModal();
         });
@@ -100,6 +124,7 @@ class Game {
         this.fetchLevels();
         this.initAuth();
         this.initContact();
+        this.initApkPrompt();
     }
 
     initAuth() {
@@ -164,6 +189,36 @@ class Game {
             document.getElementById('auth-error').innerText = "";
             
             document.getElementById('auth-modal').classList.add('open');
+        }
+    }
+
+    initApkPrompt() {
+        const modal = document.getElementById('apk-modal');
+        const closeBtn = document.getElementById('close-apk-btn');
+        const downloadBtn = document.getElementById('btn-download-apk');
+        const continueBtn = document.getElementById('btn-continue-web');
+
+        const dismissPrompt = () => {
+            modal.classList.remove('open');
+            localStorage.setItem('apkPromptDismissed', 'true');
+        };
+
+        closeBtn.onclick = dismissPrompt;
+        continueBtn.onclick = dismissPrompt;
+        
+        downloadBtn.onclick = () => {
+            window.open('https://github.com/your-username/number-link/releases/latest/download/app.apk', '_blank'); 
+            dismissPrompt();
+        };
+
+        modal.addEventListener('click', (e) => {
+            if (e.target.id === 'apk-modal') dismissPrompt();
+        });
+
+        if (this.isMobile && localStorage.getItem('apkPromptDismissed') !== 'true') {
+            setTimeout(() => {
+                modal.classList.add('open');
+            }, 1500);
         }
     }
 
@@ -317,6 +372,56 @@ class Game {
                 console.error("Error saving to cloud:", e);
             }
         }
+    }
+
+    executeSearch() {
+        const searchInput = document.getElementById('level-search');
+        if (!searchInput) return;
+
+        const searchTerm = searchInput.value.trim();
+        const grid = document.getElementById('level-grid');
+        const buttons = grid.getElementsByClassName('lvl-btn');
+        
+        for (let btn of buttons) {
+            if (searchTerm === "" || btn.innerText.includes(searchTerm)) {
+                btn.style.display = ''; 
+            } else {
+                btn.style.display = 'none'; 
+            }
+        }
+    }
+
+    openLevelModal() {
+        const modal = document.getElementById('level-modal');
+        const grid = document.getElementById('level-grid');
+        const searchInput = document.getElementById('level-search');
+
+        if (searchContainer) searchContainer.classList.remove('hidden');
+        grid.scrollTop = 0;
+        this.lastScrollTop = 0;
+        
+        grid.innerHTML = '';
+        if (searchInput) searchInput.value = '';
+        
+        if (this.allLevels.length === 0) {
+            grid.innerHTML = '<p style="color:var(--text-color); padding:20px;">Levels loading...</p>';
+        } else {
+            const limit = this.isDevMode ? this.allLevels.length : this.maxUnlockedIndex;
+            
+            for (let i = 0; i <= limit && i < this.allLevels.length; i++) {
+                const lvl = this.allLevels[i];
+                const btn = document.createElement('button');
+                btn.innerText = lvl.id;
+                btn.className = 'lvl-btn';
+                
+                if (i === this.currentLevelIndex) btn.classList.add('active');
+                
+                btn.onclick = () => this.loadLevel(i);
+                grid.appendChild(btn);
+            }
+        }
+
+        modal.classList.add('open');
     }
 
     async fetchLevels() {
