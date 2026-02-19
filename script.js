@@ -51,6 +51,7 @@ class Game {
         this.userLines = []; 
         this.currentDragLine = null;
         
+        this.isAPK = typeof Capacitor !== 'undefined' && Capacitor.getPlatform && Capacitor.getPlatform() === 'android';
         this.isDrawing = false;
         this.isDarkMode = false;
         this.isWinning = false;
@@ -216,7 +217,7 @@ class Game {
             if (e.target.id === 'apk-modal') dismissPrompt();
         });
 
-        if (this.isMobile && localStorage.getItem('apkPromptDismissed') !== 'true') {
+        if (this.isMobile && localStorage.getItem('apkPromptDismissed') !== 'true' && !this.isAPK) {
             setTimeout(() => {
                 modal.classList.add('open');
             }, 1500);
