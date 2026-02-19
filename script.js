@@ -144,6 +144,15 @@ class Game {
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
+                if (!user.emailVerified) {
+                    await signOut(auth);
+                    this.currentUser = null;
+                    this.isDevMode = false;
+                    authBtn.innerText = loggedOutText;
+                    await this.loadProgress();
+                    return;
+                }
+
                 this.currentUser = user;
                 this.isDevMode = (user.email === this.devEmail); 
                 authBtn.innerText = loggedInText;
@@ -251,6 +260,7 @@ class Game {
         }
 
         errorText.innerText = "Processing...";
+        errorText.style.color = "";
         
         try {
             if (this.isLoginMode) {
@@ -258,7 +268,8 @@ class Game {
                 
                 if (!userCred.user.emailVerified) {
                     await signOut(auth);
-                    errorText.innerText = "Please check your inbox and verify your email before logging in.";
+                    errorText.style.color = "#ef4444";
+                    errorText.innerText = "Please verify your email before logging in.";
                     return;
                 }
                 
@@ -279,8 +290,11 @@ class Game {
             }
         } catch (error) {
             errorText.style.color = "#ef4444";
-            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
-                errorText.innerText = "Incorrect email or password.";
+            
+            if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found') {
+                errorText.innerText = "This account does not exist. Please register.";
+            } else if (error.code === 'auth/wrong-password') {
+                errorText.innerText = "Incorrect password.";
             } else if (error.code === 'auth/email-already-in-use') {
                 errorText.innerText = "An account with this email already exists.";
             } else if (error.code === 'auth/weak-password') {
