@@ -1037,7 +1037,7 @@ class Game {
         if (this.lastHintDate !== today) {
             this.hints = 2; 
             this.lastHintDate = today;
-            alert("New Day! Hints reset to 2.");
+            this.showToast("New Day! Hints reset to 2. 💡");
             this.saveProgress();
         }
     }
@@ -1059,6 +1059,12 @@ class Game {
         } else if (this.lastLoginDate !== todayString) {
             if (this.lastLoginDate === yesterdayString) {
                 this.streak++;
+                setTimeout(() => {
+                    this.showToast(`🔥 Streak increased! ${this.streak} Days! 🔥`, 4000);
+                    this.startCelebration();
+                    
+                    setTimeout(() => this.stopCelebration(), 3000);
+                }, 1000);
             } else {
                 this.streak = 1;
             }
@@ -1403,6 +1409,20 @@ class Game {
         });
 
         requestAnimationFrame(() => this.animateConfetti());
+    }
+
+    showToast(message, duration = 3000) {
+        const toast = document.getElementById('toast-notification');
+        if (!toast) return;
+        
+        toast.innerText = message;
+        toast.classList.add('show');
+        
+        if (this.toastTimeout) clearTimeout(this.toastTimeout);
+        
+        this.toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+        }, duration);
     }
 
     showAnswer() {
