@@ -39,31 +39,33 @@ class Game {
         this.splashStartTime = Date.now();
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
+        this.wrapper = document.getElementById('game-wrapper');
         this.confettiCanvas = document.getElementById('confetti-canvas');
         this.confettiCtx = this.confettiCanvas.getContext('2d');
-        this.confettiParticles = [];
-        this.isCelebrating = false;
-        this.wrapper = document.getElementById('game-wrapper');
 
-        this.allLevels = [];
         this.currentLevelIndex = 0;
         this.maxUnlockedIndex = 0; 
-        this.hints = 2;
-        this.lastHintDate = null;
-        this.gridSize = 5; 
         this.maxNumber = 0;
+        this.hints = 2;
+        this.gridSize = 5;
+
+        this.confettiParticles = [];
+        this.allLevels = [];
         this.grid = []; 
-        this.solutionPath = []; 
+        this.solutionPath = [];
+        this.userLines = [];
         this.numberIndices = {}; 
-        this.userLines = []; 
-        this.currentDragLine = null;
-        
+
+        this.isCelebrating = false;
         this.isDrawing = false;
         this.isDarkMode = false;
         this.isWinning = false;
-        this.currentUser = null;
+        this.hasPromptedLogin = false;
         this.isLoginMode = true;
+        this.currentUser = null;
         this.searchTimeout = null;
+        this.currentDragLine = null;
+        this.lastHintDate = null;
 
         this.colors = [ '#6d28d9', '#ef4444', '#059669', '#2563eb', '#db2777', '#d97706', '#0891b2' ];
         
@@ -90,15 +92,20 @@ class Game {
             if (e.target.id === 'profile-modal') e.target.classList.remove('open');
         });
         document.getElementById('profile-logout-btn').onclick = () => this.handleLogout();
-        document.getElementById('profile-change-email').onclick = () => this.handleEmailChange();
         document.getElementById('profile-reset-pwd').onclick = () => this.handlePasswordReset();
 
+        document.getElementById('profile-change-email').onclick = () => this.openChangeEmailModal();
+        document.getElementById('close-change-email-btn').onclick = () => document.getElementById('change-email-modal').classList.remove('open');
+        document.getElementById('submit-change-email-btn').onclick = () => this.submitEmailChange();
+        document.getElementById('change-email-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'change-email-modal') e.target.classList.remove('open');
+        });
+
         document.getElementById('level-select-btn').onclick = () => this.openLevelModal();
-        document.getElementById('close-level-btn').onclick = () => this.closeLevelModal();
+        document.getElementById('level-search-btn').addEventListener('click', () => this.executeSearch());
         document.getElementById('level-search').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.executeSearch();
         });
-        document.getElementById('level-search-btn').addEventListener('click', () => this.executeSearch());
         this.lastScrollTop = 0;
         const levelGrid = document.getElementById('level-grid');
         const searchContainer = document.querySelector('.search-container');
@@ -116,8 +123,20 @@ class Game {
             
             this.lastScrollTop = currentScrollTop <= 0 ? 0 : currentScrollTop; 
         });
+        document.getElementById('close-level-btn').onclick = () => this.closeLevelModal();
         document.getElementById('level-modal').addEventListener('click', (e) => {
             if (e.target.id === 'level-modal') this.closeLevelModal();
+        });
+
+        document.getElementById('close-promo-btn').onclick = () => document.getElementById('promo-modal').classList.remove('open');
+        document.getElementById('btn-promo-guest').onclick = () => document.getElementById('promo-modal').classList.remove('open');
+        document.getElementById('btn-promo-login').onclick = () => {
+        document.getElementById('promo-modal').classList.remove('open');
+            this.toggleAuth(); 
+        };
+
+        document.getElementById('promo-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'promo-modal') e.target.classList.remove('open');
         });
 
         this.devEmail = "admin@test.com";
@@ -162,6 +181,14 @@ class Game {
                 this.isDevMode = false; 
                 authBtn.innerText = loggedOutText;
                 await this.loadProgress();
+
+                if (!this.hasPromptedLogin) {
+                    this.hasPromptedLogin = true;
+                    
+                    setTimeout(() => {
+                        document.getElementById('promo-modal').classList.add('open');
+                    }, 3000); 
+                }
             }
         });
     }
@@ -213,27 +240,63 @@ class Game {
         document.getElementById('profile-modal').classList.remove('open');
     }
 
-    async handleEmailChange() {
+    openChangeEmailModal() {
         if (!this.currentUser) return;
         
-        const newEmail = prompt("Enter your new email address:");
+        document.getElementById('new-email-input').value = "";
+        document.getElementById('confirm-email-checkbox').checked = false;
         
-        if (!newEmail || newEmail.trim() === "" || newEmail === this.currentUser.email) {
-            return; 
+        const errorText = document.getElementById('change-email-error');
+        errorText.innerText = "";
+        errorText.style.color = "#ef4444";
+        
+        document.getElementById('profile-modal').classList.remove('open');
+        document.getElementById('change-email-modal').classList.add('open');
+    }
+
+    async submitEmailChange() {
+        if (!this.currentUser) return;
+
+        const newEmail = document.getElementById('new-email-input').value.trim();
+        const isConfirmed = document.getElementById('confirm-email-checkbox').checked;
+        const errorText = document.getElementById('change-email-error');
+
+        if (!newEmail) {
+            errorText.innerText = "Please enter a new email address.";
+            return;
+        }
+        if (!isConfirmed) {
+            errorText.innerText = "Please check the box to confirm.";
+            return;
+        }
+        if (newEmail === this.currentUser.email) {
+            errorText.innerText = "This is already your current email.";
+            return;
         }
 
+        errorText.style.color = "";
+        errorText.innerText = "Processing...";
+
         try {
-            await verifyBeforeUpdateEmail(this.currentUser, newEmail.trim());
-            alert(`A verification link has been sent to ${newEmail.trim()}. Please check that inbox to confirm the change.`);
+            await verifyBeforeUpdateEmail(this.currentUser, newEmail);
+            
+            errorText.style.color = "#059669";
+            errorText.innerText = `Success! A verification link has been sent to ${newEmail}.`;
+            
+            setTimeout(() => {
+                document.getElementById('change-email-modal').classList.remove('open');
+            }, 3000);
+
         } catch (error) {
+            errorText.style.color = "#ef4444";
             if (error.code === 'auth/requires-recent-login') {
-                alert("For security reasons, please log out and log back in before changing your email address.");
+                errorText.innerText = "For security, please log out and log back in before changing your email.";
             } else if (error.code === 'auth/invalid-email') {
-                alert("Please enter a valid email address.");
+                errorText.innerText = "Please enter a valid email address.";
             } else if (error.code === 'auth/email-already-in-use') {
-                alert("That email is already registered to another account.");
+                errorText.innerText = "That email is already registered to another account.";
             } else {
-                alert("Error updating email: " + error.message);
+                errorText.innerText = error.message;
             }
         }
     }
@@ -644,19 +707,28 @@ class Game {
     }
 
     resizeCanvas() {
-        const rect = this.wrapper.getBoundingClientRect();
-        const displaySize = Math.floor(Math.min(rect.width, rect.height) - 20);
+        const maxWidth = Math.min(window.innerWidth * 0.92, 600);
+        const maxHeight = window.innerHeight - 220;
+        const wrapperSize = Math.floor(Math.min(maxWidth, maxHeight));
+        
+        this.wrapper.style.width = `${wrapperSize}px`;
+        this.wrapper.style.height = `${wrapperSize}px`;
+
+        const displaySize = wrapperSize - 5;
         const dpr = Math.max(1, window.devicePixelRatio || 1);
+
         this.canvas.width = displaySize * dpr;
         this.canvas.height = displaySize * dpr;
         this.canvas.style.width = `${displaySize}px`;
         this.canvas.style.height = `${displaySize}px`;
+
         if (this.ctx.setTransform) {
             this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         } else {
             try { this.ctx.resetTransform(); } catch (e) {}
             this.ctx.scale(dpr, dpr);
         }
+        
         this.cellSize = displaySize / this.gridSize;
         this.draw();
     }

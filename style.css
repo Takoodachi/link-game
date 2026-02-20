@@ -37,6 +37,7 @@ html, body.mobile-layout {
     top: 0;
     left: 0;
     width: 100vw;
+    height: 100vh;
     height: 100dvh;
     touch-action: none;
 }
@@ -244,11 +245,6 @@ h1 {
     padding: 10px;
     border-radius: 15px;
     box-shadow: 0 15px 35px var(--shadow);
-    width: min(92vw, 600px);
-    max-width: 600px;
-    max-height: calc(100vh - 220px);
-    aspect-ratio: 1 / 1;
-    height: auto;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -626,6 +622,72 @@ body.dark-mode .auth-input { border-color: #4b5563; }
     margin: 0;
 }
 
+/* Profile Modal and Button */
+.profile-body {
+    padding: 20px;
+    color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    text-align: left;
+}
+
+.profile-stat {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.4;
+}
+
+.profile-small-btn {
+    padding: 4px 10px;
+    font-size: 12px;
+    margin-left: 10px;
+    border-radius: 4px;
+}
+
+.logout-btn-red {
+    margin-top: 10px;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+}
+
+.logout-btn-red:hover { background-color: #dc2626; }
+
+#close-profile-btn {
+    background: none; 
+    border: none; 
+    font-size: 1.5rem; 
+    cursor: pointer; 
+    color: var(--text-color);
+}
+
+/* Change Email modal */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-color);
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 5px;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+#close-change-email-btn {
+    background: none; 
+    border: none; 
+    font-size: 1.5rem; 
+    cursor: pointer; 
+    color: var(--text-color);
+}
+
 /* Conflict Modal */
 .conflict-body {
     padding: 15px 20px 0;
@@ -685,39 +747,8 @@ body.dark-mode .auth-input { border-color: #4b5563; }
     color: var(--text-color);
 }
 
-/* Profile Modal and Button */
-.profile-body {
-    padding: 20px;
-    color: var(--text-color);
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    text-align: left;
-}
-
-.profile-stat {
-    margin: 0;
-    font-size: 15px;
-    line-height: 1.4;
-}
-
-.profile-small-btn {
-    padding: 4px 10px;
-    font-size: 12px;
-    margin-left: 10px;
-    border-radius: 4px;
-}
-
-.logout-btn-red {
-    margin-top: 10px;
-    background-color: #ef4444;
-    color: white;
-    border: none;
-}
-
-.logout-btn-red:hover { background-color: #dc2626; }
-
-#close-profile-btn {
+/* Promo Modal */
+#close-promo-btn {
     background: none; 
     border: none; 
     font-size: 1.5rem; 
@@ -771,6 +802,7 @@ body.dark-mode .splash-logo { background-image: url('splash_light.png'); }
     top: 0;
     left: 0;
     width: 100vw;
+    height: 100vh;
     height: 100dvh;
     background: var(--bg-color);
     z-index: 9999;

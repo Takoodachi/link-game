@@ -113,6 +113,26 @@
         </div>
     </div>
 
+    <div id="change-email-modal" class="modal-overlay">
+        <div class="modal-content auth-modal-content">
+            <div class="modal-header">
+                <h2>Change Email</h2>
+                <button id="close-change-email-btn">✖</button>
+            </div>
+            <div class="auth-form">
+                <input type="email" id="new-email-input" class="auth-input" placeholder="New Email Address">
+                
+                <label class="checkbox-container">
+                    <input type="checkbox" id="confirm-email-checkbox">
+                    <span>Are you sure you want to change your email?</span>
+                </label>
+
+                <button id="submit-change-email-btn" class="game-btn btn-primary">Confirm</button>
+                <p id="change-email-error" class="auth-error-msg"></p>
+            </div>
+        </div>
+    </div>
+
     <div id="conflict-modal" class="modal-overlay">
         <div class="modal-content conflict-modal-content">
             <div class="modal-header">
@@ -127,6 +147,26 @@
                 </button>
                 <button id="btn-keep-local" class="conflict-btn local-btn">
                     Keep Local Progress<br><small>(<span id="conflict-local-text">Level ?</span>)</small>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="promo-modal" class="modal-overlay">
+        <div class="modal-content conflict-modal-content">
+            <div class="modal-header">
+                <h2>Save Your Progress!</h2>
+                <button id="close-promo-btn">✖</button>
+            </div>
+            <div class="conflict-body">
+                <p>Create an account to save your level progress and pick up right where you left off across all your devices.</p>
+            </div>
+            <div class="conflict-options">
+                <button id="btn-promo-login" class="conflict-btn cloud-btn">
+                    Login / Register
+                </button>
+                <button id="btn-promo-guest" class="conflict-btn local-btn">
+                    Play as Guest
                 </button>
             </div>
         </div>
