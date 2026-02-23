@@ -283,11 +283,24 @@ canvas {
 @keyframes shine { to { background-position: 200% center; } }
 
 /* Custom Toast Notifications */
-.toast {
+#toast-container {
     position: fixed;
     top: 25px;
     left: 50%;
-    transform: translateX(-50%) translateY(-100px);
+    transform: translateX(-50%);
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    align-items: center;
+}
+
+body.mobile-layout #toast-container {
+    top: 80px; 
+}
+
+.toast {
     background: var(--accent);
     color: var(--on-accent);
     padding: 12px 24px;
@@ -295,16 +308,16 @@ canvas {
     font-weight: bold;
     font-size: 16px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-    z-index: 10000;
     opacity: 0;
-    pointer-events: none;
     text-align: center;
     white-space: nowrap;
+    transform: translateY(-20px); 
     transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55), opacity 0.4s ease;
+    pointer-events: auto;
 }
 
 .toast.show {
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
     opacity: 1;
 }
 

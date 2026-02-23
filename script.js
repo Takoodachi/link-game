@@ -553,26 +553,32 @@ class Game {
 
     async fetchLevels() {
         try {
-            const response = await fetch('levels.json');
+            const response = await fetch('levels.enc');
             if (!response.ok) throw new Error("Could not load levels");
-            this.allLevels = await response.json();
+            
+            const encodedText = await response.text();
+            
+            const decodedText = atob(encodedText);
+            this.allLevels = JSON.parse(decodedText);
             
             if (this.currentLevelIndex >= this.allLevels.length) {
                 this.currentLevelIndex = this.allLevels.length - 1;
             }
             
             this.loadLevel(this.currentLevelIndex);
+            
             const elapsedTime = Date.now() - this.splashStartTime;
             const remainingTime = Math.max(0, 1500 - elapsedTime);
             
             setTimeout(() => {
                 this.removeSplashScreen(); 
             }, remainingTime);
+            
         } catch (error) {
             console.error(error);
             document.getElementById('message-area').innerText = "Loading...";
             setTimeout(() => {
-                if(this.allLevels.length === 0) alert("Please verify levels.json is uploaded to GitHub.");
+                if(this.allLevels.length === 0) alert("Please verify levels.enc is uploaded to GitHub.");
             }, 2000);
         }
     }
@@ -1412,16 +1418,28 @@ class Game {
     }
 
     showToast(message, duration = 3000) {
-        const toast = document.getElementById('toast-notification');
-        if (!toast) return;
+        let container = document.getElementById('toast-container');
+        if (!container) return;
         
+        const toast = document.createElement('div');
+        toast.className = 'toast';
         toast.innerText = message;
+        
+        container.appendChild(toast);
+        
+        void toast.offsetWidth;
+        
         toast.classList.add('show');
         
-        if (this.toastTimeout) clearTimeout(this.toastTimeout);
-        
-        this.toastTimeout = setTimeout(() => {
+        setTimeout(() => {
             toast.classList.remove('show');
+            
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 400); 
+            
         }, duration);
     }
 
