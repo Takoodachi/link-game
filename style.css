@@ -821,11 +821,11 @@ body.mobile-layout .contact-corner {
     height: 120px;
     border-radius: 20px; 
     display: block;
-    background-image: url('splash_dark.png');
+    background-image: url('splash_dark.svg');
     background-size: cover;
 }
 
-body.dark-mode .splash-logo { background-image: url('splash_light.png'); }
+body.dark-mode .splash-logo { background-image: url('splash_light.svg'); }
 
 .web-splash {
     position: fixed;

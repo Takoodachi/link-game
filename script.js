@@ -715,7 +715,7 @@ class Game {
         
         const favicon = document.getElementById('dynamic-favicon');
         if (favicon) {
-            favicon.href = this.isDarkMode ? "favicon_dark.png" : "favicon_light.png";
+            favicon.href = this.isDarkMode ? "favicon_dark.svg" : "favicon_light.svg";
         }
     }
 
