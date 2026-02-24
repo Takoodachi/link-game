@@ -42,6 +42,20 @@
 
     <button id="auth-btn" class="game-btn btn-secondary auth-top-right"></button>
 
+    <div id="gamemode-sidebar">
+        <h3 style="margin: 0 0 5px 0; color: var(--text-color); font-size: 1.2rem; text-align: center;">Game Modes</h3>
+        
+        <button class="game-btn btn-primary gamemode-btn">Number Link</button>
+        <button class="game-btn btn-secondary gamemode-btn">Speedrun</button>
+        <button class="game-btn btn-secondary gamemode-btn">Blindfold</button>
+        <button class="game-btn btn-secondary gamemode-btn">Optimal Path</button>
+        <button class="game-btn btn-secondary gamemode-btn">Connecting Words</button>
+        
+        <hr style="width: 100%; border: 1px solid var(--btn-bg); margin: 5px 0;">
+        
+        <button id="sidebar-auth-trigger" class="game-btn btn-secondary">Profile / Settings</button>
+    </div>
+
     <div id="rules-container">
         <button id="rules-toggle-btn" title="How to play">i</button>
         <div id="rules-panel">
@@ -167,26 +181,6 @@
                 </button>
                 <button id="btn-promo-guest" class="conflict-btn local-btn">
                     Play as Guest
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="apk-modal" class="modal-overlay">
-        <div class="modal-content conflict-modal-content">
-            <div class="modal-header">
-                <h2>Get the App!</h2>
-                <button id="close-apk-btn">✖</button>
-            </div>
-            <div class="conflict-body">
-                <p>Playing on mobile? Download the official Android APK for a smoother experience, full-screen gameplay, and better touch controls!</p>
-            </div>
-            <div class="conflict-options">
-                <button id="btn-download-apk" class="conflict-btn cloud-btn">
-                    Download APK
-                </button>
-                <button id="btn-continue-web" class="conflict-btn local-btn">
-                    Continue on Web
                 </button>
             </div>
         </div>

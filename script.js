@@ -30,7 +30,6 @@ const db = getFirestore(app);
 class Game {
     constructor() {
         this.isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        this.isAPK = typeof Capacitor !== 'undefined' && Capacitor.getPlatform && Capacitor.getPlatform() === 'android';
 
         if (this.isMobile) {
             document.body.classList.add('mobile-layout');
@@ -81,7 +80,30 @@ class Game {
             this.checkOrientation();
         });
 
-        document.getElementById('auth-btn').onclick = () => this.toggleAuth();
+        const authBtn = document.getElementById('auth-btn');
+        const sidebar = document.getElementById('gamemode-sidebar');
+
+        if (!localStorage.getItem('gamemodeSidebarVisited')) {
+            sidebar.classList.add('open');
+            localStorage.setItem('gamemodeSidebarVisited', 'true');
+        }
+
+        authBtn.onclick = (e) => {
+            e.stopPropagation();
+            sidebar.classList.toggle('open');
+        };
+
+        document.addEventListener('click', (e) => {
+            if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && !authBtn.contains(e.target)) {
+                sidebar.classList.remove('open');
+            }
+        });
+
+        document.getElementById('sidebar-auth-trigger').onclick = () => {
+            sidebar.classList.remove('open');
+            this.toggleAuth();
+        };
+
         document.getElementById('close-auth-btn').onclick = () => document.getElementById('auth-modal').classList.remove('open');
         document.getElementById('auth-submit-btn').onclick = () => this.handleAuthSubmit();
         document.getElementById('auth-toggle-text').onclick = () => this.toggleAuthMode();
@@ -151,17 +173,14 @@ class Game {
         this.fetchLevels();
         this.initAuth();
         this.initContact();
-        this.initApkPrompt();
     }
 
     // Authentication and Cloud Methods
     initAuth() {
         const authBtn = document.getElementById('auth-btn');
+        const sidebarAuthBtn = document.getElementById('sidebar-auth-trigger');
         
-        const loggedInText = this.isMobile ? "👤✓" : "Profile";
-        const loggedOutText = this.isMobile ? "👤" : "Login";
-
-        authBtn.innerText = loggedOutText;
+        authBtn.innerText = this.isMobile ? "☰" : "Menu";
 
         onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -169,19 +188,19 @@ class Game {
                     await signOut(auth);
                     this.currentUser = null;
                     this.isDevMode = false;
-                    authBtn.innerText = loggedOutText;
+                    if (sidebarAuthBtn) sidebarAuthBtn.innerText = "Login / Register";
                     await this.loadProgress();
                     return;
                 }
 
                 this.currentUser = user;
                 this.isDevMode = (user.email === this.devEmail); 
-                authBtn.innerText = loggedInText;
+                if (sidebarAuthBtn) sidebarAuthBtn.innerText = "Profile / Settings";
                 await this.loadProgress();
             } else {
                 this.currentUser = null;
                 this.isDevMode = false; 
-                authBtn.innerText = loggedOutText;
+                if (sidebarAuthBtn) sidebarAuthBtn.innerText = "Login / Register";
                 await this.loadProgress();
                 
                 const today = new Date();
@@ -650,36 +669,6 @@ class Game {
                 }
             }
         });
-    }
-
-    initApkPrompt() {
-        const modal = document.getElementById('apk-modal');
-        const closeBtn = document.getElementById('close-apk-btn');
-        const downloadBtn = document.getElementById('btn-download-apk');
-        const continueBtn = document.getElementById('btn-continue-web');
-
-        const dismissPrompt = () => {
-            modal.classList.remove('open');
-            localStorage.setItem('apkPromptDismissed', 'true');
-        };
-
-        closeBtn.onclick = dismissPrompt;
-        continueBtn.onclick = dismissPrompt;
-        
-        downloadBtn.onclick = () => {
-            window.open('https://github.com/Takoodachi/numberlink-game/releases/tag/Android_App', '_blank'); 
-            dismissPrompt();
-        };
-
-        modal.addEventListener('click', (e) => {
-            if (e.target.id === 'apk-modal') dismissPrompt();
-        });
-
-        if (this.isMobile && localStorage.getItem('apkPromptDismissed') !== 'true' && !this.isAPK) {
-            setTimeout(() => {
-                modal.classList.add('open');
-            }, 1500);
-        }
     }
 
     checkOrientation() {
@@ -1494,10 +1483,6 @@ class Game {
         if (webSplash) {
             webSplash.classList.add('hidden');
             setTimeout(() => webSplash.remove(), 500); 
-        }
-
-        if (typeof Capacitor !== 'undefined' && Capacitor.Plugins && Capacitor.Plugins.SplashScreen) {
-            Capacitor.Plugins.SplashScreen.hide();
         }
     }
 }
