@@ -1452,7 +1452,26 @@ class Game {
                     ctx.arc(cx(c), cy(r), cs * 0.35 * scale, 0, Math.PI*2); 
                     ctx.fill();
                     ctx.restore();
-                    ctx.fillStyle = nodeTextColor; ctx.fillText(cell.val, cx(c), cy(r));
+                    
+                    let showText = true;
+                    if (this.currentMode === 'blindfold') {
+                        if (cell.val !== 1 && cell.val !== this.maxNumber) {
+                            showText = false;
+                            
+                            const prevLine = this.userLines.find(l => l.startVal === cell.val - 1);
+                            if (prevLine) {
+                                const lastPt = prevLine.points[prevLine.points.length - 1];
+                                if (lastPt.r === r && lastPt.c === c) {
+                                    showText = true;
+                                }
+                            }
+                        }
+                    }
+
+                    if (showText) {
+                        ctx.fillStyle = nodeTextColor; 
+                        ctx.fillText(cell.val, cx(c), cy(r));
+                    }
                 }
             }
         }
