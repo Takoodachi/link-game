@@ -48,25 +48,30 @@ class Game {
         this.hints = 2;
         this.gridSize = 5;
         this.streak = 0;
-        this.lastLoginDate = null;
-
+        this.speedrunStartTime = 0;
+        this.speedrunCurrentTime = 0;
+        
         this.confettiParticles = [];
         this.allLevels = [];
         this.grid = []; 
         this.solutionPath = [];
         this.userLines = [];
-        this.numberIndices = {}; 
+        this.numberIndices = {};
+        this.speedrunBestTimes = {};
 
         this.isCelebrating = false;
         this.isDrawing = false;
         this.isDarkMode = false;
         this.isWinning = false;
         this.hasPromptedLogin = false;
+        this.isSpeedrunActive = false;
         this.isLoginMode = true;
+        this.lastLoginDate = null;
         this.currentUser = null;
         this.searchTimeout = null;
         this.currentDragLine = null;
         this.lastHintDate = null;
+        this.currentMode = 'classic';
 
         this.colors = [ '#6d28d9', '#ef4444', '#059669', '#2563eb', '#db2777', '#d97706', '#0891b2' ];
         
@@ -173,6 +178,7 @@ class Game {
         this.fetchLevels();
         this.initAuth();
         this.initContact();
+        this.initGameModes();
     }
 
     // Authentication and Cloud Methods
@@ -278,6 +284,73 @@ class Game {
     handleLogout() {
         signOut(auth);
         document.getElementById('profile-modal').classList.remove('open');
+    }
+
+    initGameModes() {
+        const modeButtons = document.querySelectorAll('.gamemode-btn');
+        const modes = ['classic', 'speedrun', 'blindfold', 'efficiency', 'words'];
+        
+        modeButtons.forEach((btn, index) => {
+            btn.onclick = () => {
+                modeButtons.forEach(b => {
+                    b.classList.remove('btn-primary');
+                    b.classList.add('btn-secondary');
+                });
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+                
+                this.setGameMode(modes[index]);
+                
+                if (this.isMobile) {
+                    document.getElementById('gamemode-sidebar').classList.remove('open');
+                }
+            };
+        });
+    }
+
+    setGameMode(mode) {
+        if (this.currentMode === mode) return; 
+        this.currentMode = mode;
+        this.loadLevel(this.currentLevelIndex); 
+        
+        let displayMode = mode === 'classic' ? 'Number Link' : mode.charAt(0).toUpperCase() + mode.slice(1);
+        this.showToast(`Switched to ${displayMode} Mode`, 2000);
+    }
+
+    startSpeedrun() {
+        if (this.isSpeedrunActive) return;
+        this.isSpeedrunActive = true;
+        this.speedrunStartTime = Date.now() - this.speedrunCurrentTime;
+        this.updateUI(); 
+        
+        const tick = () => {
+            if (!this.isSpeedrunActive) return;
+            this.speedrunCurrentTime = Date.now() - this.speedrunStartTime;
+            document.getElementById('hints-display').innerText = this.formatTime(this.speedrunCurrentTime);
+            requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+
+    stopSpeedrun() {
+        this.isSpeedrunActive = false;
+        this.updateUI();
+    }
+
+    resetSpeedrun() {
+        this.stopSpeedrun();
+        this.speedrunCurrentTime = 0;
+        if (this.currentMode === 'speedrun') {
+            document.getElementById('hints-display').innerText = this.formatTime(0);
+        }
+    }
+
+    formatTime(ms) {
+        const totalSeconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        const milliseconds = Math.floor((ms % 1000) / 10);
+        return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
     }
 
     openChangeEmailModal() {
@@ -420,6 +493,7 @@ class Game {
             this.lastHintDate = data.lastHintDate;
             this.streak = data.streak || 0;
             this.lastLoginDate = data.lastLoginDate || null;
+            this.speedrunBestTimes = data.speedrunBestTimes || {};
         }
 
         if (this.currentUser) {
@@ -462,6 +536,7 @@ class Game {
         this.lastHintDate = cloudData.lastHintDate;
         this.streak = cloudData.streak || 0;
         this.lastLoginDate = cloudData.lastLoginDate || null;
+        this.speedrunBestTimes = cloudData.speedrunBestTimes || {};
         
         localStorage.setItem('linkGameData', JSON.stringify(cloudData));
         this.updateUI();
@@ -503,7 +578,8 @@ class Game {
             hints: this.hints,
             lastHintDate: this.lastHintDate,
             streak: this.streak,
-            lastLoginDate: this.lastLoginDate
+            lastLoginDate: this.lastLoginDate,
+            speedrunBestTimes: this.speedrunBestTimes
         };
         
         localStorage.setItem('linkGameData', JSON.stringify(data));
@@ -606,6 +682,7 @@ class Game {
         if (!this.allLevels || !this.allLevels[index]) return;
 
         this.currentLevelIndex = index;
+        this.resetSpeedrun();
         const levelData = this.allLevels[index];
         
         this.gridSize = levelData.size;
@@ -781,8 +858,14 @@ class Game {
     getLineAt(r, c) { return this.userLines.find(line => line.points.some(p => p.r === r && p.c === c)); }
     
     handleStart(e, isTouch) {
+        if (this.currentMode === 'speedrun' && !this.isSpeedrunActive) {
+            this.startSpeedrun();
+        }
+
         if (this.isWinning) return; 
+
         if(isTouch) e.preventDefault();
+
         const {r, c} = this.getPos(e, isTouch);
         if (!this.isValidCell(r, c)) return;
         const cell = this.grid[r][c];
@@ -915,6 +998,10 @@ class Game {
 
         e.preventDefault();
 
+        if (this.currentMode === 'speedrun' && !this.isSpeedrunActive) {
+            this.startSpeedrun();
+        }
+
         if (!this.isDrawing || !this.currentDragLine) {
             let startNode = null;
             let startVal = null;
@@ -979,7 +1066,15 @@ class Game {
     
     undo() { if (this.userLines.length > 0 && !this.isWinning) { this.userLines.pop(); this.draw(); } }
 
-    resetLevel() { if (!this.isWinning) { this.userLines = []; this.draw(); } }
+    resetLevel() { 
+        if (!this.isWinning) { 
+            this.userLines = []; 
+            if (this.currentMode === 'speedrun') {
+                this.resetSpeedrun();
+            }
+            this.draw(); 
+        } 
+    }
 
     useHint() {
         if ((this.hints <= 0 && !this.isDevMode) || this.isWinning) { 
@@ -1093,6 +1188,7 @@ class Game {
 
     triggerWinSequence() {
         this.isWinning = true;
+        if (this.currentMode === 'speedrun') this.stopSpeedrun();
         const pathLines = this.userLines;
         
         this.winAnimationPoints = [];
@@ -1129,6 +1225,17 @@ class Game {
             msg.classList.remove('visible');
             msg.innerText = "";
             
+            if (this.currentMode === 'speedrun') {
+                const bestTime = this.speedrunBestTimes[this.currentLevelIndex] || Infinity;
+                if (this.speedrunCurrentTime < bestTime) {
+                    this.speedrunBestTimes[this.currentLevelIndex] = this.speedrunCurrentTime;
+                    this.showToast(`New Best Time: ${this.formatTime(this.speedrunCurrentTime)}! 🏆`, 4000);
+                    this.saveProgress();
+                } else {
+                    this.showToast(`Time: ${this.formatTime(this.speedrunCurrentTime)}. Best: ${this.formatTime(bestTime)}`, 4000);
+                }
+            }
+            
             if (this.currentLevelIndex + 1 < this.allLevels.length) {
                 this.currentLevelIndex++;
                 this.saveProgress();
@@ -1144,8 +1251,6 @@ class Game {
             document.getElementById('level-select-btn').innerText = `Level ${this.allLevels[this.currentLevelIndex].id} ▾`;
         }
         
-        document.getElementById('hints-display').innerText = this.isDevMode ? `Hints: ∞ (Dev)` : `Hints: ${this.hints}`;
-
         const streakDisplay = document.getElementById('streak-display');
         if (streakDisplay) {
             if (this.currentUser) {
@@ -1157,11 +1262,49 @@ class Game {
         }
         
         const answerBtn = document.getElementById('btn-show-answer');
+        const hintBtn = document.getElementById('btn-hint');
+        const hintsDisplay = document.getElementById('hints-display');
+        const bestTimeDisplay = document.getElementById('best-time-display');
 
-        if (this.currentLevelIndex < this.maxUnlockedIndex || this.isDevMode) {
-            answerBtn.style.display = 'inline-block';
-        } else {
+        if (this.currentMode === 'speedrun') {
+            hintsDisplay.innerText = this.formatTime(this.speedrunCurrentTime || 0);
+            hintBtn.innerText = "Start";
+            hintBtn.onclick = () => this.startSpeedrun();
             answerBtn.style.display = 'none';
+            
+            if (bestTimeDisplay) {
+                bestTimeDisplay.style.display = 'inline';
+                const bestTime = this.speedrunBestTimes[this.currentLevelIndex];
+                if (bestTime !== undefined && bestTime !== Infinity) {
+                    bestTimeDisplay.innerText = `Best: ${this.formatTime(bestTime)}`;
+                } else {
+                    bestTimeDisplay.innerText = `Best: 00:00.00`;
+                }
+            }
+            
+            if (this.isSpeedrunActive) {
+                hintBtn.disabled = true;
+                hintBtn.style.opacity = '0.5';
+            } else {
+                hintBtn.disabled = false;
+                hintBtn.style.opacity = '1';
+            }
+        } else {
+            hintsDisplay.innerText = this.isDevMode ? `Hints: ∞ (Dev)` : `Hints: ${this.hints}`;
+            hintBtn.innerText = "Hint";
+            hintBtn.onclick = () => this.useHint();
+            hintBtn.disabled = false;
+            hintBtn.style.opacity = '1';
+            
+            if (bestTimeDisplay) {
+                bestTimeDisplay.style.display = 'none';
+            }
+            
+            if (this.currentLevelIndex < this.maxUnlockedIndex || this.isDevMode) {
+                answerBtn.style.display = 'inline-block';
+            } else {
+                answerBtn.style.display = 'none';
+            }
         }
     }
 
