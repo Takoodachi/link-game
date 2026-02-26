@@ -728,6 +728,12 @@ class Game {
             
             setTimeout(() => {
                 this.removeSplashScreen(); 
+                
+                if (this.isMobile) {
+                    setTimeout(() => {
+                        this.showToast("For full features, play on a PC/Laptop! 💻", 4500);
+                    }, 500);
+                }
             }, remainingTime);
             
         } catch (error) {
@@ -1624,7 +1630,7 @@ class Game {
             if (bestTimeDisplay) bestTimeDisplay.style.display = 'none';
             
             if (this.currentWordLevelIndex < this.maxUnlockedWordIndex || this.isDevMode) {
-                answerBtn.style.display = 'inline-block';
+                answerBtn.style.display = this.isMobile ? 'none' : 'inline-block';
             } else {
                 answerBtn.style.display = 'none';
             }
@@ -1640,7 +1646,7 @@ class Game {
             }
             
             if (this.currentLevelIndex < this.maxUnlockedIndex || this.isDevMode) {
-                answerBtn.style.display = 'inline-block';
+                answerBtn.style.display = this.isMobile ? 'none' : 'inline-block';
             } else {
                 answerBtn.style.display = 'none';
             }

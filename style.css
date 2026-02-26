@@ -55,7 +55,6 @@ body.mobile-layout .auth-modal-content {
 
 body.mobile-layout header { padding-top: 110px; }
 
-body.mobile-layout .auth-top-right,
 body.mobile-layout #rules-container { top: 45px !important; }
 
 body.mobile-layout #game-wrapper { margin-bottom: 2vh; }
