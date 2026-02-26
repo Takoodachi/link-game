@@ -58,6 +58,7 @@ class Game {
         this.userLines = [];
         this.numberIndices = {};
         this.speedrunBestTimes = {};
+        this.optimalBestScores = {};
 
         this.isCelebrating = false;
         this.isDrawing = false;
@@ -289,7 +290,7 @@ class Game {
 
     initGameModes() {
         const modeButtons = document.querySelectorAll('.gamemode-btn');
-        const modes = ['classic', 'speedrun', 'blindfold', 'efficiency', 'words'];
+        const modes = ['classic', 'speedrun', 'blindfold', 'optimal', 'words'];
         
         modeButtons.forEach((btn, index) => {
             btn.onclick = () => {
@@ -313,10 +314,31 @@ class Game {
         if (this.currentMode === mode) return; 
         this.currentMode = mode;
         this.loadLevel(this.currentLevelIndex); 
-        this.updateRulesUI();
+        this.updateRulesUI(); 
         
-        let displayMode = mode === 'classic' ? 'Number Link' : mode.charAt(0).toUpperCase() + mode.slice(1);
+        let displayMode = mode === 'classic' ? 'Number Link' : 
+                          mode === 'optimal' ? 'Optimal Path' : 
+                          mode === 'words' ? 'Connecting Letters' :
+                          mode.charAt(0).toUpperCase() + mode.slice(1);
+        
+        const mainTitle = document.getElementById('main-game-title');
+        if (mainTitle) {
+            mainTitle.innerText = displayMode;
+        }
+
         this.showToast(`Switched to ${displayMode} Mode`, 2000);
+
+        if (['blindfold', 'optimal', 'words'].includes(mode)) {
+            const rulesKey = `hasSeenRules_${mode}`;
+            if (!localStorage.getItem(rulesKey)) {
+                localStorage.setItem(rulesKey, 'true');
+                
+                setTimeout(() => {
+                    const rulesModal = document.getElementById('rules-modal');
+                    if (rulesModal) rulesModal.classList.add('open');
+                }, 400); 
+            }
+        }
     }
 
     startSpeedrun() {
@@ -496,6 +518,7 @@ class Game {
             this.streak = data.streak || 0;
             this.lastLoginDate = data.lastLoginDate || null;
             this.speedrunBestTimes = data.speedrunBestTimes || {};
+            this.optimalBestScores = data.optimalBestScores || {};
         }
 
         if (this.currentUser) {
@@ -539,6 +562,7 @@ class Game {
         this.streak = cloudData.streak || 0;
         this.lastLoginDate = cloudData.lastLoginDate || null;
         this.speedrunBestTimes = cloudData.speedrunBestTimes || {};
+        this.optimalBestScores = cloudData.optimalBestScores || {};
         
         localStorage.setItem('linkGameData', JSON.stringify(cloudData));
         this.updateUI();
@@ -581,7 +605,8 @@ class Game {
             lastHintDate: this.lastHintDate,
             streak: this.streak,
             lastLoginDate: this.lastLoginDate,
-            speedrunBestTimes: this.speedrunBestTimes
+            speedrunBestTimes: this.speedrunBestTimes,
+            optimalBestScores: this.optimalBestScores
         };
         
         localStorage.setItem('linkGameData', JSON.stringify(data));
@@ -796,6 +821,10 @@ class Game {
         if (this.currentMode === 'blindfold') {
             rulesHTML += `<div class="rule-item"><div class="rule-icon">❓</div><div class="rule-text">Connect hidden numbers in order to reveal them!</div></div>`;
             rulesHTML += `<div class="rule-item"><div class="rule-icon">▧</div><div class="rule-text">Fill every cell</div></div>`;
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">≠</div><div class="rule-text">Lines cannot cross</div></div>`;
+        } else if (this.currentMode === 'optimal') {
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">1-2-3</div><div class="rule-text">Connect numbers in order</div></div>`;
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">📏</div><div class="rule-text">Use the fewest tiles possible</div></div>`;
             rulesHTML += `<div class="rule-item"><div class="rule-icon">≠</div><div class="rule-text">Lines cannot cross</div></div>`;
         } else {
             rulesHTML += `<div class="rule-item"><div class="rule-icon">1-2-3</div><div class="rule-text">Connect numbers in order</div></div>`;
@@ -1248,6 +1277,15 @@ class Game {
         }
     }
 
+    calculateTilesUsed() {
+        const usedSet = new Set();
+        this.userLines.forEach(line => line.points.forEach(p => usedSet.add(`${p.r},${p.c}`)));
+        if (this.currentDragLine) {
+            this.currentDragLine.points.forEach(p => usedSet.add(`${p.r},${p.c}`));
+        }
+        return usedSet.size;
+    }
+
     // Check Win and Animation Methods
     checkWin() {
         const set = new Set();
@@ -1255,7 +1293,7 @@ class Game {
         this.userLines.forEach(line => { line.points.forEach(p => set.add(`${p.r},${p.c}`)); });
         
         const isGridFull = (set.size === this.gridSize * this.gridSize);
-        if (!isGridFull) return;
+        if (this.currentMode !== 'optimal' && !isGridFull) return;
 
         for (let i = 1; i < this.maxNumber; i++) {
             const line = this.userLines.find(l => l.startVal === i);
@@ -1319,6 +1357,17 @@ class Game {
                 } else {
                     this.showToast(`Time: ${this.formatTime(this.speedrunCurrentTime)}. Best: ${this.formatTime(bestTime)}`, 4000);
                 }
+            } else if (this.currentMode === 'optimal') {
+                const tilesUsed = this.calculateTilesUsed();
+                const bestScore = this.optimalBestScores[this.currentLevelIndex] || Infinity;
+                
+                if (tilesUsed < bestScore) {
+                    this.optimalBestScores[this.currentLevelIndex] = tilesUsed;
+                    this.showToast(`New Optimal Path: ${tilesUsed} tiles! 🏆`, 4000);
+                    this.saveProgress();
+                } else {
+                    this.showToast(`Tiles Used: ${tilesUsed}. Best: ${bestScore}`, 4000);
+                }
             }
             
             if (this.currentLevelIndex + 1 < this.allLevels.length) {
@@ -1374,6 +1423,23 @@ class Game {
                 hintBtn.disabled = false;
                 hintBtn.style.opacity = '1';
             }
+        } else if (this.currentMode === 'optimal') {
+            hintsDisplay.innerText = `Tiles: ${this.calculateTilesUsed()}`;
+            hintBtn.innerText = "Hint";
+            hintBtn.onclick = () => this.useHint();
+            hintBtn.disabled = false;
+            hintBtn.style.opacity = '1';
+            answerBtn.style.display = 'none';
+            
+            if (bestTimeDisplay) {
+                bestTimeDisplay.style.display = 'inline';
+                const bestScore = this.optimalBestScores[this.currentLevelIndex];
+                if (bestScore !== undefined && bestScore !== Infinity) {
+                    bestTimeDisplay.innerText = `Best: ${bestScore} tiles`;
+                } else {
+                    bestTimeDisplay.innerText = `Best: --`;
+                }
+            }
         } else {
             hintsDisplay.innerText = this.isDevMode ? `Hints: ∞ (Dev)` : `Hints: ${this.hints}`;
             hintBtn.innerText = "Hint";
@@ -1402,6 +1468,11 @@ class Game {
         const lineColor = style.getPropertyValue('--line-color').trim();
         const nodeColor = style.getPropertyValue('--node-color').trim();
         const nodeTextColor = this.isDarkMode ? "#000" : "#fff";
+
+        if (this.currentMode === 'optimal' && !isAnimating) {
+            const hintsDisplay = document.getElementById('hints-display');
+            if (hintsDisplay) hintsDisplay.innerText = `Tiles: ${this.calculateTilesUsed()}`;
+        }
 
         let keepAnimating = false;
         if (!isAnimating) {
