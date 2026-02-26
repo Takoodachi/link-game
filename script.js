@@ -50,12 +50,16 @@ class Game {
         this.streak = 0;
         this.speedrunStartTime = 0;
         this.speedrunCurrentTime = 0;
+        this.currentWordLevelIndex = 0;
+        this.maxUnlockedWordIndex = 0;
+        this.currentWordString = "";
         
         this.confettiParticles = [];
         this.allLevels = [];
         this.grid = []; 
         this.solutionPath = [];
         this.userLines = [];
+        this.wordLevels = [];
         this.numberIndices = {};
         this.speedrunBestTimes = {};
         this.optimalBestScores = {};
@@ -93,6 +97,14 @@ class Game {
             sidebar.classList.add('open');
             localStorage.setItem('gamemodeSidebarVisited', 'true');
         }
+
+        const wordSidebar = document.getElementById('word-def-sidebar');
+        document.getElementById('close-word-def-btn').onclick = () => wordSidebar.classList.remove('open');
+        document.addEventListener('click', (e) => {
+            if (wordSidebar.classList.contains('open') && !wordSidebar.contains(e.target) && e.target.id !== 'btn-show-answer') {
+                wordSidebar.classList.remove('open');
+            }
+        });
 
         authBtn.onclick = (e) => {
             e.stopPropagation();
@@ -169,7 +181,7 @@ class Game {
             if (e.target.id === 'promo-modal') e.target.classList.remove('open');
         });
 
-        this.devEmail = "admin@test.com";
+        this.devEmail = "luongdtran06@gmail.com";
         this.isDevMode = false;
 
         this.initLeaderboard();
@@ -181,6 +193,7 @@ class Game {
         this.initAuth();
         this.initContact();
         this.initGameModes();
+        this.fetchWordLevels();
     }
 
     // Authentication and Cloud Methods
@@ -313,7 +326,10 @@ class Game {
     setGameMode(mode) {
         if (this.currentMode === mode) return; 
         this.currentMode = mode;
-        this.loadLevel(this.currentLevelIndex); 
+        
+        const targetIndex = mode === 'words' ? this.maxUnlockedWordIndex : this.maxUnlockedIndex;
+        this.loadLevel(targetIndex);
+        
         this.updateRulesUI(); 
         
         let displayMode = mode === 'classic' ? 'Number Link' : 
@@ -513,9 +529,11 @@ class Game {
             const data = JSON.parse(saved);
             this.currentLevelIndex = data.currentLevelIndex || 0;
             this.maxUnlockedIndex = data.maxUnlockedIndex || 0;
+            this.streak = data.streak || 0;
+            this.currentWordLevelIndex = data.currentWordLevelIndex || 0;
+            this.maxUnlockedWordIndex = data.maxUnlockedWordIndex || 0;
             this.hints = data.hints !== undefined ? data.hints : 2;
             this.lastHintDate = data.lastHintDate;
-            this.streak = data.streak || 0;
             this.lastLoginDate = data.lastLoginDate || null;
             this.speedrunBestTimes = data.speedrunBestTimes || {};
             this.optimalBestScores = data.optimalBestScores || {};
@@ -560,6 +578,8 @@ class Game {
         this.hints = cloudData.hints;
         this.lastHintDate = cloudData.lastHintDate;
         this.streak = cloudData.streak || 0;
+        this.currentWordLevelIndex = cloudData.currentWordLevelIndex || 0;
+        this.maxUnlockedWordIndex = cloudData.maxUnlockedWordIndex || 0;
         this.lastLoginDate = cloudData.lastLoginDate || null;
         this.speedrunBestTimes = cloudData.speedrunBestTimes || {};
         this.optimalBestScores = cloudData.optimalBestScores || {};
@@ -606,7 +626,9 @@ class Game {
             streak: this.streak,
             lastLoginDate: this.lastLoginDate,
             speedrunBestTimes: this.speedrunBestTimes,
-            optimalBestScores: this.optimalBestScores
+            optimalBestScores: this.optimalBestScores,
+            currentWordLevelIndex: this.currentWordLevelIndex,
+            maxUnlockedWordIndex: this.maxUnlockedWordIndex,
         };
         
         localStorage.setItem('linkGameData', JSON.stringify(data));
@@ -645,25 +667,37 @@ class Game {
         const searchInput = document.getElementById('level-search');
         const searchContainer = document.querySelector('.search-container');
 
-        if (searchContainer) searchContainer.classList.remove('hidden');
+        if (searchContainer) {
+            if (this.currentMode === 'words') {
+                searchContainer.style.display = 'none';
+            } else {
+                searchContainer.style.display = 'flex';
+                searchContainer.classList.remove('hidden');
+            }
+        }
+        
         grid.scrollTop = 0;
         this.lastScrollTop = 0;
 
         grid.innerHTML = '';
         if (searchInput) searchInput.value = '';
         
-        if (this.allLevels.length === 0) {
+        const activeLevels = this.currentMode === 'words' ? this.wordLevels : this.allLevels;
+        const activeMaxUnlocked = this.currentMode === 'words' ? this.maxUnlockedWordIndex : this.maxUnlockedIndex;
+        const activeCurrentIndex = this.currentMode === 'words' ? this.currentWordLevelIndex : this.currentLevelIndex;
+
+        if (activeLevels.length === 0) {
             grid.innerHTML = '<p style="color:var(--text-color); padding:20px;">Levels loading...</p>';
         } else {
-            const limit = this.isDevMode ? this.allLevels.length : this.maxUnlockedIndex;
+            const limit = this.isDevMode ? activeLevels.length : activeMaxUnlocked;
             
-            for (let i = 0; i <= limit && i < this.allLevels.length; i++) {
-                const lvl = this.allLevels[i];
+            for (let i = 0; i <= limit && i < activeLevels.length; i++) {
+                const lvl = activeLevels[i];
                 const btn = document.createElement('button');
-                btn.innerText = lvl.id;
+                btn.innerText = lvl.id || (i + 1); 
                 btn.className = 'lvl-btn';
                 
-                if (i === this.currentLevelIndex) btn.classList.add('active');
+                if (i === activeCurrentIndex) btn.classList.add('active');
                 
                 btn.onclick = () => this.loadLevel(i);
                 grid.appendChild(btn);
@@ -705,7 +739,73 @@ class Game {
         }
     }
 
+    async fetchWordLevels() {
+        try {
+            const response = await fetch('word_levels.enc');
+            const encodedText = await response.text();
+            
+            const cleanText = encodedText.replace(/\s+/g, '');
+            this.wordLevels = JSON.parse(atob(cleanText));
+            
+            if (this.currentMode === 'words') {
+                this.loadLevel(this.currentWordLevelIndex);
+            }
+        } catch (error) {
+            console.error("Failed to load word levels:", error);
+        }
+    }
+
     loadLevel(index) {
+        const uiControls = document.getElementById('ui-controls');
+        if (uiControls) uiControls.style.display = 'flex';
+
+        if (this.currentMode === 'words') {
+            this.currentWordLevelIndex = index;
+            const level = this.wordLevels[index];
+            if (!level) {
+                this.grid = [];
+                return;
+            }
+
+            if (this.isDevMode) {
+                console.log(`Level ${index + 1} Valid Words:`, level.validWords);
+            }
+            
+            this.gridSize = level.size;
+            this.maxNumber = 2;
+            this.numberIndices = {
+                1: { r: level.startNode.r, c: level.startNode.c },
+                2: { r: level.endNode.r, c: level.endNode.c }
+            };
+            
+            this.grid = [];
+            let flatIndex = 0;
+            for (let r = 0; r < this.gridSize; r++) {
+                const row = [];
+                for (let c = 0; c < this.gridSize; c++) {
+                    const letter = level.grid[flatIndex++];
+                    const isStart = (r === level.startNode.r && c === level.startNode.c);
+                    const isEnd = (r === level.endNode.r && c === level.endNode.c);
+                    
+                    row.push({
+                        r, c, letter,
+                        type: (isStart || isEnd) ? 'fixed' : 'empty',
+                        val: isStart ? 1 : (isEnd ? 2 : null)
+                    });
+                }
+                this.grid.push(row);
+            }
+            
+            this.userLines = [];
+            this.currentDragLine = null;
+            this.isWinning = false;
+            this.currentWordString = "";
+            this.resizeCanvas();
+            this.updateUI();
+            this.closeLevelModal();
+            return;
+        }
+
         if (!this.allLevels || !this.allLevels[index]) return;
 
         this.currentLevelIndex = index;
@@ -825,6 +925,10 @@ class Game {
         } else if (this.currentMode === 'optimal') {
             rulesHTML += `<div class="rule-item"><div class="rule-icon">1-2-3</div><div class="rule-text">Connect numbers in order</div></div>`;
             rulesHTML += `<div class="rule-item"><div class="rule-icon">📏</div><div class="rule-text">Use the fewest tiles possible</div></div>`;
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">≠</div><div class="rule-text">Lines cannot cross</div></div>`;
+        } else if (this.currentMode === 'words') {
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">A-Z</div><div class="rule-text">Connect the highlighted start and end letters</div></div>`;
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">📖</div><div class="rule-text">Spell a valid dictionary word</div></div>`;
             rulesHTML += `<div class="rule-item"><div class="rule-icon">≠</div><div class="rule-text">Lines cannot cross</div></div>`;
         } else {
             rulesHTML += `<div class="rule-item"><div class="rule-icon">1-2-3</div><div class="rule-text">Connect numbers in order</div></div>`;
@@ -1288,6 +1392,39 @@ class Game {
 
     // Check Win and Animation Methods
     checkWin() {
+        if (this.currentMode === 'words') {
+            if (!this.currentDragLine && this.userLines.length === 1) {
+                const line = this.userLines[0];
+                const lastPt = line.points[line.points.length - 1];
+                const endCell = this.grid[lastPt.r][lastPt.c];
+                
+                if (endCell.val === 2) {
+                    const level = this.wordLevels[this.currentWordLevelIndex];
+                    
+                    let finalWord = "";
+                    for (let pt of line.points) {
+                        finalWord += this.grid[pt.r][pt.c].letter;
+                    }
+                    
+                    this.currentWordString = finalWord;
+                    const hintsDisplay = document.getElementById('hints-display');
+                    if (hintsDisplay) hintsDisplay.innerText = finalWord;
+
+                    if (level.validWords.includes(finalWord)) {
+                        this.triggerWinSequence();
+                    } else {
+                        if (hintsDisplay) {
+                            hintsDisplay.style.color = "#ef4444";
+                            setTimeout(() => hintsDisplay.style.color = "", 1000);
+                        }
+                        this.userLines = [];
+                        this.draw();
+                    }
+                }
+            }
+            return;
+        }
+
         const set = new Set();
         this.grid.forEach((row, r) => row.forEach((cell, c) => { if(cell.type === 'fixed') set.add(`${r},${c}`); }));
         this.userLines.forEach(line => { line.points.forEach(p => set.add(`${p.r},${p.c}`)); });
@@ -1331,53 +1468,101 @@ class Game {
 
     handleLevelComplete() {
         const msg = document.getElementById('message-area');
-        msg.innerText = "Level Complete!";
+        const uiControls = document.getElementById('ui-controls');
+        
+        if (uiControls) uiControls.style.display = 'none';
+        
+        if (this.currentMode === 'words') {
+            const level = this.wordLevels[this.currentWordLevelIndex];
+            const def = level.wordDefinitions ? level.wordDefinitions[this.currentWordString] : "";
+            
+            msg.innerHTML = `<div class="word-win-card">
+                <span style="color: var(--accent); text-transform: uppercase; font-weight: bold; font-size: 1.3rem;">${this.currentWordString}</span><br> 
+                <span style="font-size: 1rem; color: var(--text-color);">${def.toLowerCase()}</span>
+            </div>`;
+            msg.style.height = "auto";
+            
+            if (this.currentWordLevelIndex === this.maxUnlockedWordIndex) {
+                this.maxUnlockedWordIndex++;
+            }
+        } else {
+            msg.innerHTML = `<div class="word-win-card" style="text-align: center; padding: 18px 30px; display: flex; align-items: center; justify-content: center;">
+                <span style="color: var(--accent); text-transform: uppercase; font-weight: bold; font-size: 1.4rem;">Level Complete!</span>
+            </div>`;
+            msg.style.height = "auto";
+            
+            if (this.currentLevelIndex === this.maxUnlockedIndex) {
+                this.maxUnlockedIndex++;
+            }
+        }
+        
         msg.classList.add('visible'); 
         this.startCelebration();
+        
         if (typeof gtag === 'function') {
+            const activeLevels = this.currentMode === 'words' ? this.wordLevels : this.allLevels;
+            const activeIndex = this.currentMode === 'words' ? this.currentWordLevelIndex : this.currentLevelIndex;
             gtag('event', 'level_complete', {
-                'level_index': this.currentLevelIndex,
-                'level_id': this.allLevels[this.currentLevelIndex].id
+                'level_index': activeIndex,
+                'level_id': activeLevels[activeIndex] ? activeLevels[activeIndex].id : (activeIndex + 1)
             });
         }
-        if (this.currentLevelIndex === this.maxUnlockedIndex) {
-            this.maxUnlockedIndex++;
-        }
+        
+        const delay = this.currentMode === 'words' ? 4500 : 2000;
+        
         setTimeout(() => {
             this.stopCelebration();
             msg.classList.remove('visible');
-            msg.innerText = "";
             
-            if (this.currentMode === 'speedrun') {
-                const bestTime = this.speedrunBestTimes[this.currentLevelIndex] || Infinity;
-                if (this.speedrunCurrentTime < bestTime) {
-                    this.speedrunBestTimes[this.currentLevelIndex] = this.speedrunCurrentTime;
-                    this.showToast(`New Best Time: ${this.formatTime(this.speedrunCurrentTime)}! 🏆`, 4000);
-                    this.saveProgress();
-                } else {
-                    this.showToast(`Time: ${this.formatTime(this.speedrunCurrentTime)}. Best: ${this.formatTime(bestTime)}`, 4000);
-                }
-            } else if (this.currentMode === 'optimal') {
-                const tilesUsed = this.calculateTilesUsed();
-                const bestScore = this.optimalBestScores[this.currentLevelIndex] || Infinity;
+            setTimeout(() => {
+                msg.innerHTML = "";
+                msg.style.height = "40px";
+                const uiControls = document.getElementById('ui-controls');
+                if (uiControls) uiControls.style.display = 'flex';
                 
-                if (tilesUsed < bestScore) {
-                    this.optimalBestScores[this.currentLevelIndex] = tilesUsed;
-                    this.showToast(`New Optimal Path: ${tilesUsed} tiles! 🏆`, 4000);
-                    this.saveProgress();
-                } else {
-                    this.showToast(`Tiles Used: ${tilesUsed}. Best: ${bestScore}`, 4000);
+                if (this.currentMode === 'words') {
+                    if (this.currentWordLevelIndex + 1 < this.wordLevels.length) {
+                        this.currentWordLevelIndex++;
+                        this.saveProgress();
+                        this.loadLevel(this.currentWordLevelIndex);
+                    } else {
+                        alert("You have beaten all Connecting Letters levels!");
+                    }
+                    return;
                 }
-            }
+                
+                if (this.currentMode === 'speedrun') {
+                    const bestTime = this.speedrunBestTimes[this.currentLevelIndex] || Infinity;
+                    if (this.speedrunCurrentTime < bestTime) {
+                        this.speedrunBestTimes[this.currentLevelIndex] = this.speedrunCurrentTime;
+                        this.showToast(`New Best Time: ${this.formatTime(this.speedrunCurrentTime)}! 🏆`, 4000);
+                        this.saveProgress();
+                    } else {
+                        this.showToast(`Time: ${this.formatTime(this.speedrunCurrentTime)}. Best: ${this.formatTime(bestTime)}`, 4000);
+                    }
+                } else if (this.currentMode === 'optimal') {
+                    const tilesUsed = this.calculateTilesUsed();
+                    const bestScore = this.optimalBestScores[this.currentLevelIndex] || Infinity;
+                    
+                    if (tilesUsed < bestScore) {
+                        this.optimalBestScores[this.currentLevelIndex] = tilesUsed;
+                        this.showToast(`New Optimal Path: ${tilesUsed} tiles! 🏆`, 4000);
+                        this.saveProgress();
+                    } else {
+                        this.showToast(`Tiles Used: ${tilesUsed}. Best: ${bestScore}`, 4000);
+                    }
+                }
+                
+                if (this.currentLevelIndex + 1 < this.allLevels.length) {
+                    this.currentLevelIndex++;
+                    this.saveProgress();
+                    this.loadLevel(this.currentLevelIndex);
+                } else {
+                    alert("You have beaten all levels!");
+                }
+            }, 300);
             
-            if (this.currentLevelIndex + 1 < this.allLevels.length) {
-                this.currentLevelIndex++;
-                this.saveProgress();
-                this.loadLevel(this.currentLevelIndex);
-            } else {
-                alert("You have beaten all levels!");
-            }
-        }, 2000);
+        }, delay);
     }
 
     updateUI() {
@@ -1440,6 +1625,18 @@ class Game {
                     bestTimeDisplay.innerText = `Best: --`;
                 }
             }
+        } else if (this.currentMode === 'words') {
+            document.getElementById('level-select-btn').innerText = `Level ${this.currentWordLevelIndex + 1} ▾`;
+            hintBtn.innerText = "Hint";
+            hintBtn.disabled = true; 
+            hintBtn.style.opacity = '0.5';
+            if (bestTimeDisplay) bestTimeDisplay.style.display = 'none';
+            
+            if (this.currentWordLevelIndex < this.maxUnlockedWordIndex || this.isDevMode) {
+                answerBtn.style.display = 'inline-block';
+            } else {
+                answerBtn.style.display = 'none';
+            }
         } else {
             hintsDisplay.innerText = this.isDevMode ? `Hints: ∞ (Dev)` : `Hints: ${this.hints}`;
             hintBtn.innerText = "Hint";
@@ -1468,6 +1665,18 @@ class Game {
         const lineColor = style.getPropertyValue('--line-color').trim();
         const nodeColor = style.getPropertyValue('--node-color').trim();
         const nodeTextColor = this.isDarkMode ? "#000" : "#fff";
+
+        if (this.currentMode === 'words' && !isAnimating) {
+            let str = "";
+            const points = this.currentDragLine ? this.currentDragLine.points : (this.userLines.length > 0 ? this.userLines[0].points : []);
+            for (let pt of points) {
+                str += this.grid[pt.r][pt.c].letter;
+            }
+            this.currentWordString = str;
+            
+            const hintsDisplay = document.getElementById('hints-display');
+            if (hintsDisplay) hintsDisplay.innerText = str ? str : "Connect to form a word!";
+        }
 
         if (this.currentMode === 'optimal' && !isAnimating) {
             const hintsDisplay = document.getElementById('hints-display');
@@ -1594,7 +1803,24 @@ class Game {
         for(let r=0; r<this.gridSize; r++) {
             for(let c=0; c<this.gridSize; c++) {
                 const cell = this.grid[r][c];
-                if(cell.type === 'fixed') {
+                
+                if (this.currentMode === 'words') {
+                    if (cell.type === 'fixed') {
+                        ctx.save();
+                        ctx.shadowColor = this.isDarkMode ? "rgba(255,255,255,0.85)" : lineColor;
+                        ctx.shadowBlur = cs * 0.2;
+                        ctx.shadowOffsetY = 0;
+                        ctx.fillStyle = nodeColor; ctx.beginPath();
+                        const scale = cell.animScale || 1.0; 
+                        ctx.arc(cx(c), cy(r), cs * 0.35 * scale, 0, Math.PI*2); 
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                    
+                    ctx.fillStyle = cell.type === 'fixed' ? nodeTextColor : (this.isDarkMode ? "#fff" : "#000");
+                    ctx.fillText(cell.letter, cx(c), cy(r));
+                    
+                } else if(cell.type === 'fixed') {
                     ctx.save();
                     if (cell.val === 1 || cell.val === this.maxNumber) {
                         ctx.shadowColor = this.isDarkMode ? "rgba(255,255,255,0.85)" : lineColor;
@@ -1751,6 +1977,21 @@ class Game {
     }
 
     showAnswer() {
+        if (this.currentMode === 'words') {
+            if (this.currentWordLevelIndex >= this.maxUnlockedWordIndex && !this.isDevMode) return;
+
+            const level = this.wordLevels[this.currentWordLevelIndex];
+            const sidebar = document.getElementById('word-def-sidebar');
+            const content = document.getElementById('word-def-content');
+
+            const word = level.validWords[0];
+            const def = level.wordDefinitions ? level.wordDefinitions[word] : "Definition not found.";
+
+            content.innerHTML = `<strong style="color: var(--accent); font-size: 1.2rem; text-transform: uppercase;">${word}</strong><br><br>${def.toLowerCase()}`;
+            sidebar.classList.add('open');
+            return;
+        }
+
         if (this.currentLevelIndex >= this.maxUnlockedIndex && !this.isDevMode) return;
 
         this.userLines = [];

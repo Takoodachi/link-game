@@ -156,6 +156,64 @@ body.mobile-layout #gamemode-sidebar {
     top: 100px; 
 }
 
+/* Word Definition Sidebar */
+#word-def-sidebar {
+    position: fixed;
+    top: 70px;
+    right: 15px;
+    width: 250px;
+    background-color: var(--panel-bg);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: -5px 5px 20px var(--shadow);
+    border: 2px solid var(--btn-bg);
+    transform: translateX(150%);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+body.dark-mode #word-def-sidebar {
+    border-color: #4b5563;
+    box-shadow: -5px 5px 20px rgba(0,0,0,0.8);
+}
+
+#word-def-sidebar.open {
+    transform: translateX(0);
+}
+
+body.mobile-layout #word-def-sidebar {
+    top: 100px;
+}
+
+.word-win-card {
+    font-size: 1.1rem;
+    font-weight: normal;
+    color: var(--text-color);
+    -webkit-text-fill-color: var(--text-color);
+    background: var(--panel-bg);
+    border: 2px solid var(--accent);
+    border-radius: 12px;
+    white-space: normal;
+    line-height: 1.4;
+    padding: 15px;
+    text-shadow: none;
+    filter: none;
+    box-shadow: 0 10px 25px var(--shadow);
+    max-height: 150px;
+    overflow-y: auto;
+    max-width: 90vw;
+    margin: 0 auto 25px auto;
+    text-align: left;
+}
+
+.word-win-card::-webkit-scrollbar,
+#word-def-content::-webkit-scrollbar { width: 8px; }
+.word-win-card::-webkit-scrollbar-thumb,
+#word-def-content::-webkit-scrollbar-thumb { background: var(--btn-bg); border-radius: 8px; }
+
 /* Leaderboard Toggle Button */
 .leaderboard-top-left {
     position: absolute;
