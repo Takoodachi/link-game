@@ -55,8 +55,6 @@ body.mobile-layout .auth-modal-content {
 
 body.mobile-layout header { padding-top: 110px; }
 
-body.mobile-layout #rules-container { top: 45px !important; }
-
 body.mobile-layout #game-wrapper { margin-bottom: 2vh; }
 
 body.mobile-layout #message-area {
@@ -142,18 +140,14 @@ body.dark-mode #gamemode-sidebar {
     box-shadow: -5px 5px 20px rgba(0,0,0,0.8);
 }
 
-#gamemode-sidebar.open {
-    transform: translateX(0);
-}
+#gamemode-sidebar.open { transform: translateX(0); }
 
 .gamemode-btn {
     text-align: center;
     width: 100%;
 }
 
-body.mobile-layout #gamemode-sidebar {
-    top: 100px; 
-}
+body.mobile-layout #gamemode-sidebar { top: 100px; }
 
 /* Word Definition Sidebar */
 #word-def-sidebar {
@@ -179,13 +173,9 @@ body.dark-mode #word-def-sidebar {
     box-shadow: -5px 5px 20px rgba(0,0,0,0.8);
 }
 
-#word-def-sidebar.open {
-    transform: translateX(0);
-}
+#word-def-sidebar.open { transform: translateX(0); }
 
-body.mobile-layout #word-def-sidebar {
-    top: 100px;
-}
+body.mobile-layout #word-def-sidebar { top: 100px; }
 
 .word-win-card {
     font-size: 1rem; 
@@ -212,6 +202,7 @@ body.mobile-layout #word-def-sidebar {
 
 .word-win-card::-webkit-scrollbar,
 #word-def-content::-webkit-scrollbar { width: 8px; }
+
 .word-win-card::-webkit-scrollbar-thumb,
 #word-def-content::-webkit-scrollbar-thumb { background: var(--btn-bg); border-radius: 8px; }
 
@@ -249,13 +240,9 @@ body.dark-mode #leaderboard-panel {
     box-shadow: 5px 5px 20px rgba(0,0,0,0.8);
 }
 
-#leaderboard-panel.open {
-    transform: translateX(0);
-}
+#leaderboard-panel.open { transform: translateX(0); }
 
-body.mobile-layout #leaderboard-panel {
-    top: 100px; 
-}
+body.mobile-layout #leaderboard-panel { top: 100px; }
 
 .leaderboard-tabs {
     display: flex;
@@ -448,9 +435,7 @@ canvas {
     align-items: center;
 }
 
-body.mobile-layout #toast-container {
-    top: 80px; 
-}
+body.mobile-layout #toast-container { top: 80px; }
 
 .toast {
     background: var(--accent);
@@ -473,9 +458,7 @@ body.mobile-layout #toast-container {
     opacity: 1;
 }
 
-body.dark-mode .toast {
-    box-shadow: 0 10px 25px rgba(255,255,255,0.1);
-}
+body.dark-mode .toast { box-shadow: 0 10px 25px rgba(255,255,255,0.1); }
 
 /* Game Controls */
 #ui-controls {
@@ -1008,18 +991,6 @@ body.dark-mode .splash-logo { background-image: url('splash_light.svg'); }
 .web-splash.hidden {
     opacity: 0;
     pointer-events: none;
-}
-
-.splash-logo {
-    width: 120px;
-    height: 120px;
-    border-radius: 20px; 
-    display: block;
-}
-
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
 }
 
 .loading-dots {
