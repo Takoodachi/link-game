@@ -56,18 +56,29 @@
         <button id="sidebar-auth-trigger" class="game-btn btn-secondary">Profile / Settings</button>
     </div>
 
-    <div id="rules-container">
-        <button id="rules-toggle-btn" title="How to play">i</button>
-        <div id="rules-panel">
-            <div class="rule-item"><div class="rule-icon">1-2-3</div><div class="rule-text">Connect numbers in order</div></div>
-            <div class="rule-item"><div class="rule-icon">▧</div><div class="rule-text">Fill every cell</div></div>
-            <div class="rule-item"><div class="rule-icon">≠</div><div class="rule-text">Lines cannot cross</div></div>
-            
-            <div class="rule-item">
-                <div class="rule-icon">🎮</div>
-                <div class="rule-text" id="controls-rule-text">Drag or use arrow keys to link!</div>
+    <button id="leaderboard-toggle-btn" class="game-btn btn-secondary leaderboard-top-left"></button>
+
+    <div id="leaderboard-panel">
+        <h3 style="margin: 0 0 5px 0; color: var(--text-color); font-size: 1.2rem; text-align: center;">Leaderboard</h3>
+        
+        <div class="leaderboard-tabs">
+            <button id="tab-streak" class="tab-btn active">Highest Streak</button>
+            <button id="tab-time" class="tab-btn">Fastest Time</button>
+        </div>
+        
+        <hr style="width: 100%; border: 1px solid var(--btn-bg); margin: 5px 0;">
+        
+        <div id="leaderboard-content" class="leaderboard-list">
             </div>
-            
+    </div>
+
+    <div id="rules-modal" class="modal-overlay">
+        <div class="modal-content auth-modal-content">
+            <div class="modal-header">
+                <h2>How to Play</h2>
+                <button id="close-rules-btn">✖</button>
+            </div>
+            <div class="rules-body" id="dynamic-rules-content"></div>
         </div>
     </div>
 
@@ -201,6 +212,7 @@
     </header>
 
     <div id="game-wrapper">
+        <button id="rules-btn" title="Rules">i</button>
         <canvas id="gameCanvas"></canvas>
     </div>
 

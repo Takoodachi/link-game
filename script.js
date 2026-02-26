@@ -171,7 +171,8 @@ class Game {
         this.devEmail = "admin@test.com";
         this.isDevMode = false;
 
-        this.initSidePanel();
+        this.initLeaderboard();
+        this.initRulesModal();
         this.bindInputs();
         this.initTheme(); 
         this.checkOrientation();
@@ -312,6 +313,7 @@ class Game {
         if (this.currentMode === mode) return; 
         this.currentMode = mode;
         this.loadLevel(this.currentLevelIndex); 
+        this.updateRulesUI();
         
         let displayMode = mode === 'classic' ? 'Number Link' : mode.charAt(0).toUpperCase() + mode.slice(1);
         this.showToast(`Switched to ${displayMode} Mode`, 2000);
@@ -714,38 +716,121 @@ class Game {
         document.getElementById('level-modal').classList.remove('open');
     }
     
-    initSidePanel() {
-        const rulesContainer = document.getElementById('rules-container');
-        const rulesBtn = document.getElementById('rules-toggle-btn');
-        const panel = document.getElementById('rules-panel');
-        const controlsText = document.getElementById('controls-rule-text');
-        
-        if (controlsText) {
-            if (this.isMobile) {
-                controlsText.innerText = "Drag to link!";
-            } else {
-                controlsText.innerText = "Drag or use arrow keys to link!";
+    initLeaderboard() {
+        const lbBtn = document.getElementById('leaderboard-toggle-btn');
+        const panel = document.getElementById('leaderboard-panel');
+        const tabStreak = document.getElementById('tab-streak');
+        const tabTime = document.getElementById('tab-time');
+
+        lbBtn.innerText = this.isMobile ? "🏆" : "Leaderboard";
+
+        lbBtn.onclick = (e) => {
+            e.stopPropagation();
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                const activeType = tabTime.classList.contains('active') ? 'time' : 'streak';
+                this.renderLeaderboard(activeType);
             }
-        }
-
-        const hasVisited = localStorage.getItem('linkGameHasVisited');
-        if (!hasVisited) {
-            rulesContainer.classList.add('open');
-            localStorage.setItem('linkGameHasVisited', 'true');
-        }
-
-        rulesBtn.onclick = (e) => {
-            e.stopPropagation(); 
-            rulesContainer.classList.toggle('open');
         };
 
         document.addEventListener('click', (e) => {
-            if (rulesContainer.classList.contains('open')) {
-                if (!panel.contains(e.target) && !rulesBtn.contains(e.target)) {
-                    rulesContainer.classList.remove('open');
-                }
+            if (panel.classList.contains('open') && !panel.contains(e.target) && !lbBtn.contains(e.target)) {
+                panel.classList.remove('open');
             }
         });
+
+        tabStreak.onclick = () => {
+            tabStreak.classList.add('active');
+            tabTime.classList.remove('active');
+            this.renderLeaderboard('streak');
+        };
+
+        tabTime.onclick = () => {
+            tabTime.classList.add('active');
+            tabStreak.classList.remove('active');
+            this.renderLeaderboard('time');
+        };
+    }
+
+    renderLeaderboard(type) {
+        const content = document.getElementById('leaderboard-content');
+        content.innerHTML = '<div style="text-align: center; padding: 20px;">Loading...</div>';
+
+        setTimeout(() => {
+            content.innerHTML = '';
+            if (type === 'streak') {
+                const mockStreaks = [100, 97, 85, 60, 42, 30, 25, 12, 5, 2];
+                mockStreaks.forEach((streak, idx) => {
+                    content.innerHTML += `
+                        <div class="leaderboard-item">
+                            <span>#${idx + 1}</span> 
+                            <span>${streak} 🔥</span>
+                        </div>`;
+                });
+            } else {
+                const mockTimes = [
+                    { time: 4200, level: 10 },
+                    { time: 5100, level: 1 },
+                    { time: 6500, level: 5 },
+                    { time: 7200, level: 12 },
+                    { time: 8000, level: 2 }
+                ];
+                mockTimes.forEach((data, idx) => {
+                    content.innerHTML += `
+                        <div class="leaderboard-item">
+                            <span>#${idx + 1}</span> 
+                            <span>${this.formatTime(data.time)} - Level ${data.level}</span>
+                        </div>`;
+                });
+            }
+        }, 300); 
+    }
+
+    updateRulesUI() {
+        const rulesContainer = document.getElementById('dynamic-rules-content');
+        if (!rulesContainer) return;
+
+        const controlsText = this.isMobile ? "Drag to link!" : "Drag or use arrow keys to link!";
+        let rulesHTML = '';
+
+        if (this.currentMode === 'blindfold') {
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">❓</div><div class="rule-text">Connect hidden numbers in order to reveal them!</div></div>`;
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">▧</div><div class="rule-text">Fill every cell</div></div>`;
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">≠</div><div class="rule-text">Lines cannot cross</div></div>`;
+        } else {
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">1-2-3</div><div class="rule-text">Connect numbers in order</div></div>`;
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">▧</div><div class="rule-text">Fill every cell</div></div>`;
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">≠</div><div class="rule-text">Lines cannot cross</div></div>`;
+        }
+
+        rulesHTML += `
+            <div class="rule-item">
+                <div class="rule-icon">🎮</div>
+                <div class="rule-text">${controlsText}</div>
+            </div>
+        `;
+
+        rulesContainer.innerHTML = rulesHTML;
+    }
+
+    initRulesModal() {
+        const rulesBtn = document.getElementById('rules-btn');
+        const rulesModal = document.getElementById('rules-modal');
+        const closeBtn = document.getElementById('close-rules-btn');
+
+        this.updateRulesUI();
+
+        rulesBtn.onclick = () => rulesModal.classList.add('open');
+        closeBtn.onclick = () => rulesModal.classList.remove('open');
+        
+        rulesModal.addEventListener('click', (e) => {
+            if (e.target.id === 'rules-modal') rulesModal.classList.remove('open');
+        });
+
+        if (!localStorage.getItem('linkGameHasVisited')) {
+            rulesModal.classList.add('open');
+            localStorage.setItem('linkGameHasVisited', 'true');
+        }
     }
 
     checkOrientation() {
