@@ -189,7 +189,7 @@ body.mobile-layout #word-def-sidebar {
 }
 
 .word-win-card {
-    font-size: 1.1rem;
+    font-size: 1rem; 
     font-weight: normal;
     color: var(--text-color);
     -webkit-text-fill-color: var(--text-color);
@@ -197,14 +197,16 @@ body.mobile-layout #word-def-sidebar {
     border: 2px solid var(--accent);
     border-radius: 12px;
     white-space: normal;
-    line-height: 1.4;
-    padding: 15px;
+    line-height: 1.3;
+    padding: 10px 15px;
     text-shadow: none;
     filter: none;
     box-shadow: 0 10px 25px var(--shadow);
-    max-height: 150px;
-    overflow-y: auto;
-    max-width: 90vw;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; 
+    -webkit-box-orient: vertical;
+    overflow: hidden; 
+    max-width: 85vw;
     margin: 0 auto 25px auto;
     text-align: left;
 }

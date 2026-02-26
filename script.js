@@ -930,6 +930,7 @@ class Game {
             rulesHTML += `<div class="rule-item"><div class="rule-icon">A-Z</div><div class="rule-text">Connect the highlighted start and end letters</div></div>`;
             rulesHTML += `<div class="rule-item"><div class="rule-icon">📖</div><div class="rule-text">Spell a valid dictionary word</div></div>`;
             rulesHTML += `<div class="rule-item"><div class="rule-icon">≠</div><div class="rule-text">Lines cannot cross</div></div>`;
+            rulesHTML += `<div class="rule-item"><div class="rule-icon">💡</div><div class="rule-text">Check out the definition of the word after you finish a level by clicking on Show Answer!</div></div>`;
         } else {
             rulesHTML += `<div class="rule-item"><div class="rule-icon">1-2-3</div><div class="rule-text">Connect numbers in order</div></div>`;
             rulesHTML += `<div class="rule-item"><div class="rule-icon">▧</div><div class="rule-text">Fill every cell</div></div>`;
@@ -1472,25 +1473,16 @@ class Game {
         
         if (uiControls) uiControls.style.display = 'none';
         
+        msg.innerHTML = `<div class="word-win-card" style="text-align: center; display: flex; align-items: center; justify-content: center; padding: 18px 30px;">
+            <span style="color: var(--accent); text-transform: uppercase; font-weight: bold; font-size: 1.4rem;">Level Complete!</span>
+        </div>`;
+        msg.style.height = "auto";
+        
         if (this.currentMode === 'words') {
-            const level = this.wordLevels[this.currentWordLevelIndex];
-            const def = level.wordDefinitions ? level.wordDefinitions[this.currentWordString] : "";
-            
-            msg.innerHTML = `<div class="word-win-card">
-                <span style="color: var(--accent); text-transform: uppercase; font-weight: bold; font-size: 1.3rem;">${this.currentWordString}</span><br> 
-                <span style="font-size: 1rem; color: var(--text-color);">${def.toLowerCase()}</span>
-            </div>`;
-            msg.style.height = "auto";
-            
             if (this.currentWordLevelIndex === this.maxUnlockedWordIndex) {
                 this.maxUnlockedWordIndex++;
             }
         } else {
-            msg.innerHTML = `<div class="word-win-card" style="text-align: center; padding: 18px 30px; display: flex; align-items: center; justify-content: center;">
-                <span style="color: var(--accent); text-transform: uppercase; font-weight: bold; font-size: 1.4rem;">Level Complete!</span>
-            </div>`;
-            msg.style.height = "auto";
-            
             if (this.currentLevelIndex === this.maxUnlockedIndex) {
                 this.maxUnlockedIndex++;
             }
@@ -1508,7 +1500,7 @@ class Game {
             });
         }
         
-        const delay = this.currentMode === 'words' ? 4500 : 2000;
+        const delay = 2000; 
         
         setTimeout(() => {
             this.stopCelebration();
@@ -1517,7 +1509,6 @@ class Game {
             setTimeout(() => {
                 msg.innerHTML = "";
                 msg.style.height = "40px";
-                const uiControls = document.getElementById('ui-controls');
                 if (uiControls) uiControls.style.display = 'flex';
                 
                 if (this.currentMode === 'words') {
@@ -1560,7 +1551,7 @@ class Game {
                 } else {
                     alert("You have beaten all levels!");
                 }
-            }, 300);
+            }, 300); 
             
         }, delay);
     }
