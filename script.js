@@ -301,90 +301,6 @@ class Game {
         document.getElementById('profile-modal').classList.remove('open');
     }
 
-    initGameModes() {
-        const modeButtons = document.querySelectorAll('.gamemode-btn');
-        const modes = ['classic', 'speedrun', 'blindfold', 'optimal', 'words'];
-        
-        modeButtons.forEach((btn, index) => {
-            btn.onclick = () => {
-                modeButtons.forEach(b => {
-                    b.classList.remove('btn-primary');
-                    b.classList.add('btn-secondary');
-                });
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-primary');
-                
-                this.setGameMode(modes[index]);
-                
-                if (this.isMobile) {
-                    document.getElementById('gamemode-sidebar').classList.remove('open');
-                }
-            };
-        });
-    }
-
-    setGameMode(mode) {
-        if (this.currentMode === mode) return; 
-        this.currentMode = mode;
-        
-        const targetIndex = mode === 'words' ? this.maxUnlockedWordIndex : this.maxUnlockedIndex;
-        this.loadLevel(targetIndex);
-        
-        this.updateRulesUI(); 
-        
-        let displayMode = mode === 'classic' ? 'Number Link' : 
-                          mode === 'optimal' ? 'Optimal Path' : 
-                          mode === 'words' ? 'Connecting Letters' :
-                          mode.charAt(0).toUpperCase() + mode.slice(1);
-        
-        const mainTitle = document.getElementById('main-game-title');
-        if (mainTitle) {
-            mainTitle.innerText = displayMode;
-        }
-
-        this.showToast(`Switched to ${displayMode} Mode`, 2000);
-
-        if (['blindfold', 'optimal', 'words'].includes(mode)) {
-            const rulesKey = `hasSeenRules_${mode}`;
-            if (!localStorage.getItem(rulesKey)) {
-                localStorage.setItem(rulesKey, 'true');
-                
-                setTimeout(() => {
-                    const rulesModal = document.getElementById('rules-modal');
-                    if (rulesModal) rulesModal.classList.add('open');
-                }, 400); 
-            }
-        }
-    }
-
-    startSpeedrun() {
-        if (this.isSpeedrunActive) return;
-        this.isSpeedrunActive = true;
-        this.speedrunStartTime = Date.now() - this.speedrunCurrentTime;
-        this.updateUI(); 
-        
-        const tick = () => {
-            if (!this.isSpeedrunActive) return;
-            this.speedrunCurrentTime = Date.now() - this.speedrunStartTime;
-            document.getElementById('hints-display').innerText = this.formatTime(this.speedrunCurrentTime);
-            requestAnimationFrame(tick);
-        };
-        requestAnimationFrame(tick);
-    }
-
-    stopSpeedrun() {
-        this.isSpeedrunActive = false;
-        this.updateUI();
-    }
-
-    resetSpeedrun() {
-        this.stopSpeedrun();
-        this.speedrunCurrentTime = 0;
-        if (this.currentMode === 'speedrun') {
-            document.getElementById('hints-display').innerText = this.formatTime(0);
-        }
-    }
-
     formatTime(ms) {
         const totalSeconds = Math.floor(ms / 1000);
         const minutes = Math.floor(totalSeconds / 60);
@@ -843,9 +759,7 @@ class Game {
         this.closeLevelModal();
     }
 
-    closeLevelModal() {
-        document.getElementById('level-modal').classList.remove('open');
-    }
+    closeLevelModal() { document.getElementById('level-modal').classList.remove('open'); }
     
     initLeaderboard() {
         const lbBtn = document.getElementById('leaderboard-toggle-btn');
@@ -984,53 +898,7 @@ class Game {
         }
     }
 
-    initTheme() {
-        const savedTheme = localStorage.getItem('theme');
-        const systemMedia = window.matchMedia('(prefers-color-scheme: dark)');
-        
-        if (savedTheme) {
-            this.isDarkMode = (savedTheme === 'dark');
-        } else {
-            this.isDarkMode = systemMedia.matches;
-        }
-
-        this.applyTheme();
-
-        systemMedia.addEventListener('change', (e) => {
-            if (!localStorage.getItem('theme')) {
-                this.isDarkMode = e.matches;
-                this.applyTheme();
-                this.draw(); 
-            }
-        });
-    }
-
-    applyTheme() {
-        document.body.classList.toggle('dark-mode', this.isDarkMode);
-        
-        document.getElementById('theme-toggle').innerText = this.isDarkMode ? "☀️" : "🌙";
-        
-        const favicon = document.getElementById('dynamic-favicon');
-        if (favicon) {
-            favicon.href = this.isDarkMode ? "favicon_dark.svg" : "favicon_light.svg";
-        }
-    }
-
-    toggleTheme() {
-        this.isDarkMode = !this.isDarkMode;
-        
-        localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
-        
-        this.applyTheme();
-        this.draw(); 
-    }
-
-    setRandomColor() {
-        const randomIndex = Math.floor(Math.random() * this.colors.length);
-        const newColor = this.colors[randomIndex];
-        document.documentElement.style.setProperty('--line-color', newColor);
-    }
-
+    // Game Methods
     resizeCanvas() {
         const maxWidth = Math.min(window.innerWidth * 0.92, 600);
         const maxHeight = window.innerHeight - 220;
@@ -1057,8 +925,91 @@ class Game {
         this.cellSize = displaySize / this.gridSize;
         this.draw();
     }
+    
+    initGameModes() {
+        const modeButtons = document.querySelectorAll('.gamemode-btn');
+        const modes = ['classic', 'speedrun', 'blindfold', 'optimal', 'words'];
+        
+        modeButtons.forEach((btn, index) => {
+            btn.onclick = () => {
+                modeButtons.forEach(b => {
+                    b.classList.remove('btn-primary');
+                    b.classList.add('btn-secondary');
+                });
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+                
+                this.setGameMode(modes[index]);
+                
+                if (this.isMobile) {
+                    document.getElementById('gamemode-sidebar').classList.remove('open');
+                }
+            };
+        });
+    }
 
-    // Game Interaction Methods
+    setGameMode(mode) {
+        if (this.currentMode === mode) return; 
+        this.currentMode = mode;
+        
+        const targetIndex = mode === 'words' ? this.maxUnlockedWordIndex : this.maxUnlockedIndex;
+        this.loadLevel(targetIndex);
+        
+        this.updateRulesUI(); 
+        
+        let displayMode = mode === 'classic' ? 'Number Link' : 
+                          mode === 'optimal' ? 'Optimal Path' : 
+                          mode === 'words' ? 'Connecting Letters' :
+                          mode.charAt(0).toUpperCase() + mode.slice(1);
+        
+        const mainTitle = document.getElementById('main-game-title');
+        if (mainTitle) {
+            mainTitle.innerText = displayMode;
+        }
+
+        this.showToast(`Switched to ${displayMode} Mode`, 2000);
+
+        if (['blindfold', 'optimal', 'words'].includes(mode)) {
+            const rulesKey = `hasSeenRules_${mode}`;
+            if (!localStorage.getItem(rulesKey)) {
+                localStorage.setItem(rulesKey, 'true');
+                
+                setTimeout(() => {
+                    const rulesModal = document.getElementById('rules-modal');
+                    if (rulesModal) rulesModal.classList.add('open');
+                }, 400); 
+            }
+        }
+    }
+
+    startSpeedrun() {
+        if (this.isSpeedrunActive) return;
+        this.isSpeedrunActive = true;
+        this.speedrunStartTime = Date.now() - this.speedrunCurrentTime;
+        this.updateUI(); 
+        
+        const tick = () => {
+            if (!this.isSpeedrunActive) return;
+            this.speedrunCurrentTime = Date.now() - this.speedrunStartTime;
+            document.getElementById('hints-display').innerText = this.formatTime(this.speedrunCurrentTime);
+            requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+
+    stopSpeedrun() {
+        this.isSpeedrunActive = false;
+        this.updateUI();
+    }
+
+    resetSpeedrun() {
+        this.stopSpeedrun();
+        this.speedrunCurrentTime = 0;
+        if (this.currentMode === 'speedrun') {
+            document.getElementById('hints-display').innerText = this.formatTime(0);
+        }
+    }
+
     bindInputs() {
         this.canvas.addEventListener('mousedown', (e) => this.handleStart(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMove(e));
@@ -1121,6 +1072,8 @@ class Game {
             }
         }
     }
+
+    handleEnd() { this.isDrawing = false; this.currentDragLine = null; this.draw(); }
 
     handleMove(e, isTouch) {
         if (!this.isDrawing || !this.currentDragLine || this.isWinning) return;
@@ -1208,8 +1161,6 @@ class Game {
         
         pts.push({r, c}); this.draw();
     }
-
-    handleEnd() { this.isDrawing = false; this.currentDragLine = null; this.draw(); }
 
     handleKeyDown(e) {
         if (this.isWinning) return;
@@ -1299,6 +1250,47 @@ class Game {
             }
             this.draw(); 
         } 
+    }
+
+    showAnswer() {
+        if (this.currentMode === 'words') {
+            if (this.currentWordLevelIndex >= this.maxUnlockedWordIndex && !this.isDevMode) return;
+
+            const level = this.wordLevels[this.currentWordLevelIndex];
+            const sidebar = document.getElementById('word-def-sidebar');
+            const content = document.getElementById('word-def-content');
+
+            const word = level.validWords[0];
+            const def = level.wordDefinitions ? level.wordDefinitions[word] : "Definition not found.";
+
+            content.innerHTML = `<strong style="color: var(--accent); font-size: 1.2rem; text-transform: uppercase;">${word}</strong><br><br>${def.toLowerCase()}`;
+            sidebar.classList.add('open');
+            return;
+        }
+
+        if (this.currentLevelIndex >= this.maxUnlockedIndex && !this.isDevMode) return;
+
+        this.userLines = [];
+        this.currentDragLine = null;
+        this.isDrawing = false;
+        this.isWinning = false;
+
+        for (let val = 1; val < this.maxNumber; val++) {
+            const startIdx = this.numberIndices[val];
+            const endIdx = this.numberIndices[val + 1];
+
+            if (startIdx !== undefined && endIdx !== undefined) {
+                const points = this.solutionPath.slice(startIdx, endIdx + 1);
+                
+                this.userLines.push({
+                    startVal: val,
+                    points: points,
+                    widthScale: 0.5
+                });
+            }
+        }
+
+        this.draw();
     }
 
     useHint() {
@@ -1973,47 +1965,6 @@ class Game {
         }, duration);
     }
 
-    showAnswer() {
-        if (this.currentMode === 'words') {
-            if (this.currentWordLevelIndex >= this.maxUnlockedWordIndex && !this.isDevMode) return;
-
-            const level = this.wordLevels[this.currentWordLevelIndex];
-            const sidebar = document.getElementById('word-def-sidebar');
-            const content = document.getElementById('word-def-content');
-
-            const word = level.validWords[0];
-            const def = level.wordDefinitions ? level.wordDefinitions[word] : "Definition not found.";
-
-            content.innerHTML = `<strong style="color: var(--accent); font-size: 1.2rem; text-transform: uppercase;">${word}</strong><br><br>${def.toLowerCase()}`;
-            sidebar.classList.add('open');
-            return;
-        }
-
-        if (this.currentLevelIndex >= this.maxUnlockedIndex && !this.isDevMode) return;
-
-        this.userLines = [];
-        this.currentDragLine = null;
-        this.isDrawing = false;
-        this.isWinning = false;
-
-        for (let val = 1; val < this.maxNumber; val++) {
-            const startIdx = this.numberIndices[val];
-            const endIdx = this.numberIndices[val + 1];
-
-            if (startIdx !== undefined && endIdx !== undefined) {
-                const points = this.solutionPath.slice(startIdx, endIdx + 1);
-                
-                this.userLines.push({
-                    startVal: val,
-                    points: points,
-                    widthScale: 0.5
-                });
-            }
-        }
-
-        this.draw();
-    }
-
     // Misc Methods
     initContact() {
         const contactDiv = document.getElementById('contact-corner');
@@ -2032,6 +1983,53 @@ class Game {
         } else {
             contactDiv.innerHTML = `<a href="mailto:${email}">Contact: ${email}</a>`;
         }
+    }
+
+    initTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        const systemMedia = window.matchMedia('(prefers-color-scheme: dark)');
+        
+        if (savedTheme) {
+            this.isDarkMode = (savedTheme === 'dark');
+        } else {
+            this.isDarkMode = systemMedia.matches;
+        }
+
+        this.applyTheme();
+
+        systemMedia.addEventListener('change', (e) => {
+            if (!localStorage.getItem('theme')) {
+                this.isDarkMode = e.matches;
+                this.applyTheme();
+                this.draw(); 
+            }
+        });
+    }
+
+    applyTheme() {
+        document.body.classList.toggle('dark-mode', this.isDarkMode);
+        
+        document.getElementById('theme-toggle').innerText = this.isDarkMode ? "☀️" : "🌙";
+        
+        const favicon = document.getElementById('dynamic-favicon');
+        if (favicon) {
+            favicon.href = this.isDarkMode ? "favicon_dark.svg" : "favicon_light.svg";
+        }
+    }
+
+    toggleTheme() {
+        this.isDarkMode = !this.isDarkMode;
+        
+        localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
+        
+        this.applyTheme();
+        this.draw(); 
+    }
+
+    setRandomColor() {
+        const randomIndex = Math.floor(Math.random() * this.colors.length);
+        const newColor = this.colors[randomIndex];
+        document.documentElement.style.setProperty('--line-color', newColor);
     }
 
     removeSplashScreen() {
