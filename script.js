@@ -448,6 +448,7 @@ class Game {
             this.streak = data.streak || 0;
             this.currentWordLevelIndex = data.currentWordLevelIndex || 0;
             this.maxUnlockedWordIndex = data.maxUnlockedWordIndex || 0;
+            this.currentMode = data.currentMode || 'classic';
             this.hints = data.hints !== undefined ? data.hints : 2;
             this.lastHintDate = data.lastHintDate;
             this.lastLoginDate = data.lastLoginDate || null;
@@ -472,20 +473,25 @@ class Game {
                             this.applyCloudData(cloudData);
                         } else {
                             this.saveProgress();
+                            this.enforceSavedMode();
                         }
                     } else {
                         this.applyCloudData(cloudData);
                     }
                 } else {
                     this.saveProgress();
+                    this.enforceSavedMode();
                 }
             } catch (e) {
                 console.error("Error loading from cloud:", e);
+                this.enforceSavedMode();
             }
+        } else {
+            this.enforceSavedMode();
         }
         
         this.checkDailyHint();
-        this.checkDailyStreak()
+        this.checkDailyStreak();
     }
 
     async saveProgress() {
@@ -500,6 +506,7 @@ class Game {
             optimalBestScores: this.optimalBestScores,
             currentWordLevelIndex: this.currentWordLevelIndex,
             maxUnlockedWordIndex: this.maxUnlockedWordIndex,
+            currentMode: this.currentMode,
         };
         
         localStorage.setItem('linkGameData', JSON.stringify(data));
@@ -529,6 +536,7 @@ class Game {
         localStorage.setItem('linkGameData', JSON.stringify(cloudData));
         this.updateUI();
         this.loadLevel(this.currentLevelIndex);
+        this.enforceSavedMode();
     }
 
     askForConflictResolution(localIndex, cloudIndex) {
@@ -922,14 +930,7 @@ class Game {
         
         modeButtons.forEach((btn, index) => {
             btn.onclick = () => {
-                modeButtons.forEach(b => {
-                    b.classList.remove('btn-primary');
-                    b.classList.add('btn-secondary');
-                });
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-primary');
-                
-                this.setGameMode(modes[index]);
+                this.setGameMode(modes[index]); // Simplified!
                 
                 if (this.isMobile) {
                     document.getElementById('gamemode-sidebar').classList.remove('open');
@@ -938,12 +939,24 @@ class Game {
         });
     }
 
-    setGameMode(mode) {
+    setGameMode(mode, isInitialLoad = false) {
         if (this.currentMode === mode) return; 
         this.currentMode = mode;
         
+        const modeButtons = document.querySelectorAll('.gamemode-btn');
+        const modes = ['classic', 'speedrun', 'blindfold', 'optimal', 'words'];
+        modeButtons.forEach((btn, index) => {
+            if (modes[index] === mode) {
+                btn.classList.remove('btn-secondary');
+                btn.classList.add('btn-primary');
+            } else {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-secondary');
+            }
+        });
+
         const targetIndex = mode === 'words' ? this.maxUnlockedWordIndex : this.maxUnlockedIndex;
-        this.loadLevel(targetIndex);
+        this.loadLevel(targetIndex); 
         
         this.updateRulesUI(); 
         
@@ -957,19 +970,31 @@ class Game {
             mainTitle.innerText = displayMode;
         }
 
-        this.showToast(`Switched to ${displayMode} Mode`, 2000);
+        // FIX: Don't show toast or force a save if the game is just booting up
+        if (!isInitialLoad) {
+            this.showToast(`Switched to ${displayMode} Mode`, 2000);
+            this.saveProgress(); 
+        }
 
         if (['blindfold', 'optimal', 'words'].includes(mode)) {
             const rulesKey = `hasSeenRules_${mode}`;
             if (!localStorage.getItem(rulesKey)) {
                 localStorage.setItem(rulesKey, 'true');
                 
-                setTimeout(() => {
-                    const rulesModal = document.getElementById('rules-modal');
-                    if (rulesModal) rulesModal.classList.add('open');
-                }, 400); 
+                if (!isInitialLoad) {
+                    setTimeout(() => {
+                        const rulesModal = document.getElementById('rules-modal');
+                        if (rulesModal) rulesModal.classList.add('open');
+                    }, 400); 
+                }
             }
         }
+    }
+
+    enforceSavedMode() {
+        const targetMode = this.currentMode || 'classic';
+        this.currentMode = null;
+        this.setGameMode(targetMode, true);
     }
 
     startSpeedrun() {
