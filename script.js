@@ -42,17 +42,20 @@ class Game {
         this.confettiCanvas = document.getElementById('confetti-canvas');
         this.confettiCtx = this.confettiCanvas.getContext('2d');
 
+        this.hints = 2;
+        this.gridSize = 5;
         this.currentLevelIndex = 0;
         this.maxUnlockedIndex = 0; 
         this.maxNumber = 0;
-        this.hints = 2;
-        this.gridSize = 5;
         this.streak = 0;
         this.speedrunStartTime = 0;
         this.speedrunCurrentTime = 0;
         this.currentWordLevelIndex = 0;
         this.maxUnlockedWordIndex = 0;
-        this.currentWordString = "";
+        this.lastScrollTop = 0;
+        this.currentWordString = '';
+        this.devEmail = 'luongdtran06@gmail.com';
+        this.currentMode = 'classic';
         
         this.confettiParticles = [];
         this.allLevels = [];
@@ -64,6 +67,7 @@ class Game {
         this.speedrunBestTimes = {};
         this.optimalBestScores = {};
 
+        this.isDevMode = false;
         this.isCelebrating = false;
         this.isDrawing = false;
         this.isDarkMode = false;
@@ -76,7 +80,6 @@ class Game {
         this.searchTimeout = null;
         this.currentDragLine = null;
         this.lastHintDate = null;
-        this.currentMode = 'classic';
 
         this.colors = [ '#6d28d9', '#ef4444', '#059669', '#2563eb', '#db2777', '#d97706', '#0891b2' ];
         
@@ -148,7 +151,6 @@ class Game {
         document.getElementById('level-search').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') this.executeSearch();
         });
-        this.lastScrollTop = 0;
         const levelGrid = document.getElementById('level-grid');
         const searchContainer = document.querySelector('.search-container');
         levelGrid.addEventListener('scroll', () => {
@@ -181,9 +183,6 @@ class Game {
             if (e.target.id === 'promo-modal') e.target.classList.remove('open');
         });
 
-        this.devEmail = "luongdtran06@gmail.com";
-        this.isDevMode = false;
-
         this.initLeaderboard();
         this.initRulesModal();
         this.bindInputs();
@@ -196,7 +195,7 @@ class Game {
         this.fetchWordLevels();
     }
 
-    // Authentication and Cloud Methods
+    // Authentication Methods
     initAuth() {
         const authBtn = document.getElementById('auth-btn');
         const sidebarAuthBtn = document.getElementById('sidebar-auth-trigger');
@@ -439,6 +438,7 @@ class Game {
         }
     }
 
+    // Cloud Save and Load Methods
     async loadProgress() {
         const saved = localStorage.getItem('linkGameData');
         if (saved) {
@@ -488,6 +488,32 @@ class Game {
         this.checkDailyStreak()
     }
 
+    async saveProgress() {
+        const data = {
+            currentLevelIndex: this.currentLevelIndex,
+            maxUnlockedIndex: this.maxUnlockedIndex,
+            hints: this.hints,
+            lastHintDate: this.lastHintDate,
+            streak: this.streak,
+            lastLoginDate: this.lastLoginDate,
+            speedrunBestTimes: this.speedrunBestTimes,
+            optimalBestScores: this.optimalBestScores,
+            currentWordLevelIndex: this.currentWordLevelIndex,
+            maxUnlockedWordIndex: this.maxUnlockedWordIndex,
+        };
+        
+        localStorage.setItem('linkGameData', JSON.stringify(data));
+        this.updateUI();
+
+        if (this.currentUser) {
+            try {
+                await setDoc(doc(db, "users", this.currentUser.uid), data);
+            } catch (e) {
+                console.error("Error saving to cloud:", e);
+            }
+        }
+    }
+
     applyCloudData(cloudData) {
         this.currentLevelIndex = cloudData.currentLevelIndex;
         this.maxUnlockedIndex = cloudData.maxUnlockedIndex;
@@ -533,33 +559,7 @@ class Game {
         });
     }
 
-    async saveProgress() {
-        const data = {
-            currentLevelIndex: this.currentLevelIndex,
-            maxUnlockedIndex: this.maxUnlockedIndex,
-            hints: this.hints,
-            lastHintDate: this.lastHintDate,
-            streak: this.streak,
-            lastLoginDate: this.lastLoginDate,
-            speedrunBestTimes: this.speedrunBestTimes,
-            optimalBestScores: this.optimalBestScores,
-            currentWordLevelIndex: this.currentWordLevelIndex,
-            maxUnlockedWordIndex: this.maxUnlockedWordIndex,
-        };
-        
-        localStorage.setItem('linkGameData', JSON.stringify(data));
-        this.updateUI();
-
-        if (this.currentUser) {
-            try {
-                await setDoc(doc(db, "users", this.currentUser.uid), data);
-            } catch (e) {
-                console.error("Error saving to cloud:", e);
-            }
-        }
-    }
-
-    // UI and Level Selection Methods
+    // Level Selection Methods
     executeSearch() {
         const searchInput = document.getElementById('level-search');
         if (!searchInput) return;
@@ -761,6 +761,7 @@ class Game {
 
     closeLevelModal() { document.getElementById('level-modal').classList.remove('open'); }
     
+    // Leaderboards and Rules Methods
     initLeaderboard() {
         const lbBtn = document.getElementById('leaderboard-toggle-btn');
         const panel = document.getElementById('leaderboard-panel');
@@ -884,17 +885,6 @@ class Game {
         if (!localStorage.getItem('linkGameHasVisited')) {
             rulesModal.classList.add('open');
             localStorage.setItem('linkGameHasVisited', 'true');
-        }
-    }
-
-    checkOrientation() {
-        if (!this.isMobile) return;
-
-        const overlay = document.getElementById('orientation-lock');
-        if (window.innerWidth > window.innerHeight) {
-            overlay.style.display = 'flex';
-        } else {
-            overlay.style.display = 'none';
         }
     }
 
@@ -1226,8 +1216,6 @@ class Game {
         this.attemptMove(r, c);
     }
 
-    isValidCell(r, c) { return r >= 0 && r < this.gridSize && c >= 0 && c < this.gridSize; }
-
     isCellOccupied(r, c) {
         if (this.grid[r][c].type === 'fixed') return true;
 
@@ -1239,6 +1227,8 @@ class Game {
         
         return false;
     }
+
+    isValidCell(r, c) { return r >= 0 && r < this.gridSize && c >= 0 && c < this.gridSize; }
     
     undo() { if (this.userLines.length > 0 && !this.isWinning) { this.userLines.pop(); this.draw(); } }
 
@@ -1291,6 +1281,61 @@ class Game {
         }
 
         this.draw();
+    }
+
+    checkWin() {
+        if (this.currentMode === 'words') {
+            if (!this.currentDragLine && this.userLines.length === 1) {
+                const line = this.userLines[0];
+                const lastPt = line.points[line.points.length - 1];
+                const endCell = this.grid[lastPt.r][lastPt.c];
+                
+                if (endCell.val === 2) {
+                    const level = this.wordLevels[this.currentWordLevelIndex];
+                    
+                    let finalWord = "";
+                    for (let pt of line.points) {
+                        finalWord += this.grid[pt.r][pt.c].letter;
+                    }
+                    
+                    this.currentWordString = finalWord;
+                    const hintsDisplay = document.getElementById('hints-display');
+                    if (hintsDisplay) hintsDisplay.innerText = finalWord;
+
+                    if (level.validWords.includes(finalWord)) {
+                        this.triggerWinSequence();
+                    } else {
+                        if (hintsDisplay) {
+                            hintsDisplay.style.color = "#ef4444";
+                            setTimeout(() => hintsDisplay.style.color = "", 1000);
+                        }
+                        this.userLines = [];
+                        this.draw();
+                    }
+                }
+            }
+            return;
+        }
+
+        const set = new Set();
+        this.grid.forEach((row, r) => row.forEach((cell, c) => { if(cell.type === 'fixed') set.add(`${r},${c}`); }));
+        this.userLines.forEach(line => { line.points.forEach(p => set.add(`${p.r},${p.c}`)); });
+        
+        const isGridFull = (set.size === this.gridSize * this.gridSize);
+        if (this.currentMode !== 'optimal' && !isGridFull) return;
+
+        for (let i = 1; i < this.maxNumber; i++) {
+            const line = this.userLines.find(l => l.startVal === i);
+            
+            if (!line) return;
+
+            const lastPt = line.points[line.points.length - 1];
+            const endCell = this.grid[lastPt.r][lastPt.c];
+
+            if (endCell.val !== i + 1) return;
+        }
+
+        this.triggerWinSequence();
     }
 
     useHint() {
@@ -1389,82 +1434,7 @@ class Game {
         return usedSet.size;
     }
 
-    // Check Win and Animation Methods
-    checkWin() {
-        if (this.currentMode === 'words') {
-            if (!this.currentDragLine && this.userLines.length === 1) {
-                const line = this.userLines[0];
-                const lastPt = line.points[line.points.length - 1];
-                const endCell = this.grid[lastPt.r][lastPt.c];
-                
-                if (endCell.val === 2) {
-                    const level = this.wordLevels[this.currentWordLevelIndex];
-                    
-                    let finalWord = "";
-                    for (let pt of line.points) {
-                        finalWord += this.grid[pt.r][pt.c].letter;
-                    }
-                    
-                    this.currentWordString = finalWord;
-                    const hintsDisplay = document.getElementById('hints-display');
-                    if (hintsDisplay) hintsDisplay.innerText = finalWord;
-
-                    if (level.validWords.includes(finalWord)) {
-                        this.triggerWinSequence();
-                    } else {
-                        if (hintsDisplay) {
-                            hintsDisplay.style.color = "#ef4444";
-                            setTimeout(() => hintsDisplay.style.color = "", 1000);
-                        }
-                        this.userLines = [];
-                        this.draw();
-                    }
-                }
-            }
-            return;
-        }
-
-        const set = new Set();
-        this.grid.forEach((row, r) => row.forEach((cell, c) => { if(cell.type === 'fixed') set.add(`${r},${c}`); }));
-        this.userLines.forEach(line => { line.points.forEach(p => set.add(`${p.r},${p.c}`)); });
-        
-        const isGridFull = (set.size === this.gridSize * this.gridSize);
-        if (this.currentMode !== 'optimal' && !isGridFull) return;
-
-        for (let i = 1; i < this.maxNumber; i++) {
-            const line = this.userLines.find(l => l.startVal === i);
-            
-            if (!line) return;
-
-            const lastPt = line.points[line.points.length - 1];
-            const endCell = this.grid[lastPt.r][lastPt.c];
-
-            if (endCell.val !== i + 1) return;
-        }
-
-        this.triggerWinSequence();
-    }
-
-    triggerWinSequence() {
-        this.isWinning = true;
-        if (this.currentMode === 'speedrun') this.stopSpeedrun();
-        const pathLines = this.userLines;
-        
-        this.winAnimationPoints = [];
-        pathLines.forEach(line => { this.winAnimationPoints.push(...line.points); });
-        this.winFrame = 0; this.totalWinFrames = 120; 
-        requestAnimationFrame(() => this.animateWinLoop());
-    }
-
-    animateWinLoop() {
-        if (!this.isWinning) return;
-        this.winFrame++;
-        const progress = this.winFrame / this.totalWinFrames;
-        this.draw(true, progress); 
-        if (this.winFrame < this.totalWinFrames) { requestAnimationFrame(() => this.animateWinLoop()); } 
-        else { setTimeout(() => this.handleLevelComplete(), 500); }
-    }
-
+    // Animation Methods
     handleLevelComplete() {
         const msg = document.getElementById('message-area');
         const uiControls = document.getElementById('ui-controls');
@@ -1852,6 +1822,26 @@ class Game {
         }
     }
 
+    triggerWinSequence() {
+        this.isWinning = true;
+        if (this.currentMode === 'speedrun') this.stopSpeedrun();
+        const pathLines = this.userLines;
+        
+        this.winAnimationPoints = [];
+        pathLines.forEach(line => { this.winAnimationPoints.push(...line.points); });
+        this.winFrame = 0; this.totalWinFrames = 120; 
+        requestAnimationFrame(() => this.animateWinLoop());
+    }
+
+    animateWinLoop() {
+        if (!this.isWinning) return;
+        this.winFrame++;
+        const progress = this.winFrame / this.totalWinFrames;
+        this.draw(true, progress); 
+        if (this.winFrame < this.totalWinFrames) { requestAnimationFrame(() => this.animateWinLoop()); } 
+        else { setTimeout(() => this.handleLevelComplete(), 500); }
+    }
+
     triggerTileAnimation(r, c) {
         const cell = this.grid[r][c];
         let frame = 0;
@@ -2030,6 +2020,17 @@ class Game {
         const randomIndex = Math.floor(Math.random() * this.colors.length);
         const newColor = this.colors[randomIndex];
         document.documentElement.style.setProperty('--line-color', newColor);
+    }
+
+    checkOrientation() {
+        if (!this.isMobile) return;
+
+        const overlay = document.getElementById('orientation-lock');
+        if (window.innerWidth > window.innerHeight) {
+            overlay.style.display = 'flex';
+        } else {
+            overlay.style.display = 'none';
+        }
     }
 
     removeSplashScreen() {
